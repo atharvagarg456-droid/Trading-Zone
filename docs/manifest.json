@@ -1,0 +1,10 @@
+{
+  "name": "Trading Zone — Advisory & Commodity Stream",
+  "short_name": "Trading Zone",
+  "description": "Live Broadcast Stream, Commodity Community & Multi-Plan QR Membership for Apple iOS & Android",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#060B14",
+  "theme_color": "#060B14",
+  "orientation": "portrait"
+}

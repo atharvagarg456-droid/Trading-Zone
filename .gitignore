@@ -1,0 +1,17 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+!Trading-Zone.apk
+!releases/*.apk
+.env
+*-debug.log
+firestore-debug.log
+firebase-debug.log

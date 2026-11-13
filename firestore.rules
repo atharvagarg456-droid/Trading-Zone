@@ -1,0 +1,632 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 160 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    // Anti-Spoofing Verified Email Check
+    function isVerifiedEmail() {
+      return isSignedIn() &&
+             ('email' in request.auth.token) &&
+             request.auth.token.email is string &&
+             request.auth.token.email.size() <= 200 &&
+             ('email_verified' in request.auth.token) &&
+             request.auth.token.email_verified == true;
+    }
+
+    // Primary Owner Admin Check (No DB read required)
+    function isPrimaryAdmin() {
+      return isVerifiedEmail() && request.auth.token.email == 'atharvagarg456@gmail.com';
+    }
+
+    // Delegated Co-Admin Check via /app_config/admin_settings (Up to 3 admins total)
+    function isCoAdmin() {
+      return isVerifiedEmail() &&
+             exists(/databases/$(database)/documents/app_config/admin_settings) &&
+             (request.auth.token.email in get(/databases/$(database)/documents/app_config/admin_settings).data.adminEmails);
+    }
+
+    function isAdmin() {
+      return isPrimaryAdmin() || isCoAdmin();
+    }
+
+    function isBoundedEmailList(listVal) {
+      return listVal is list &&
+             listVal.size() >= 1 &&
+             listVal.size() <= 3 &&
+             listVal[0] is string &&
+             listVal[0].size() <= 200;
+    }
+
+    // Schema Validators
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+             data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120 &&
+             data.phoneNumber is string && data.phoneNumber.size() <= 40 &&
+             data.city is string && data.city.size() <= 100 &&
+             data.photoBase64 is string && data.photoBase64.size() <= 750000 &&
+             data.deviceId is string && data.deviceId.size() >= 1 && data.deviceId.size() <= 128 &&
+             data.deviceModel is string && data.deviceModel.size() >= 1 && data.deviceModel.size() <= 120 &&
+             data.ipAddress is string && data.ipAddress.size() >= 1 && data.ipAddress.size() <= 100 &&
+             data.accountStatus in ['PENDING_APPROVAL', 'APPROVED', 'BANNED'] &&
+             data.entitlementStatus in ['NONE', 'TRIAL_PENDING', 'TRIAL_ACTIVE', 'PAID_ACTIVE', 'EXPIRED'] &&
+             data.trialUsed is bool &&
+             data.validUntilMillis is int && data.validUntilMillis >= 0 &&
+             (!('activePlanName' in data) || (data.activePlanName is string && data.activePlanName.size() <= 120)) &&
+             (!('appLockPin' in data) || (data.appLockPin is string && data.appLockPin.size() <= 20)) &&
+             (!('securityQuestion' in data) || (data.securityQuestion is string && data.securityQuestion.size() <= 300)) &&
+             (!('securityAnswer' in data) || (data.securityAnswer is string && data.securityAnswer.size() <= 200)) &&
+             (!('termsAccepted' in data) || data.termsAccepted is bool) &&
+             (!('isCommodityMuted' in data) || data.isCommodityMuted is bool) &&
+             (!('hasPendingProfileEdit' in data) || data.hasPendingProfileEdit is bool) &&
+             (!('pendingFullName' in data) || (data.pendingFullName is string && data.pendingFullName.size() <= 120)) &&
+             (!('pendingPhoneNumber' in data) || (data.pendingPhoneNumber is string && data.pendingPhoneNumber.size() <= 40)) &&
+             (!('pendingCity' in data) || (data.pendingCity is string && data.pendingCity.size() <= 100)) &&
+             (!('pendingPhotoBase64' in data) || (data.pendingPhotoBase64 is string && data.pendingPhotoBase64.size() <= 750000)) &&
+             (!('dailyReviewCount' in data) || (data.dailyReviewCount is int && data.dailyReviewCount >= 0 && data.dailyReviewCount <= 1000)) &&
+             (!('lastReviewDate' in data) || (data.lastReviewDate is string && data.lastReviewDate.size() <= 30)) &&
+             isBoundedEmailList(data.adminEmails) &&
+             isValidTimestamp(data.lastActiveAt) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidDeviceRecord(data) {
+      return data.deviceId is string && data.deviceId.size() >= 1 && data.deviceId.size() <= 128 &&
+             data.ipAddress is string && data.ipAddress.size() >= 1 && data.ipAddress.size() <= 100 &&
+             data.deviceModel is string && data.deviceModel.size() >= 1 && data.deviceModel.size() <= 120 &&
+             data.boundUserId is string && data.boundUserId.size() >= 1 && data.boundUserId.size() <= 128 &&
+             data.trialClaimed is bool &&
+             data.isBanned is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidBroadcastMessage(data) {
+      return data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 8000 &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 60 &&
+             (!('riskLevel' in data) || data.riskLevel in ['LOW', 'MEDIUM', 'HIGH']) &&
+             data.markedPhotoBase64 is string && data.markedPhotoBase64.size() <= 850000 &&
+             data.linkUrl is string && data.linkUrl.size() <= 1000 &&
+             data.linkTitle is string && data.linkTitle.size() <= 200 &&
+             (!('replyToMessageId' in data) || (data.replyToMessageId is string && data.replyToMessageId.size() <= 128)) &&
+             (!('replyToTitle' in data) || (data.replyToTitle is string && data.replyToTitle.size() <= 200)) &&
+             (!('replyToSnippet' in data) || (data.replyToSnippet is string && data.replyToSnippet.size() <= 500)) &&
+             (!('replyToRiskLevel' in data) || (data.replyToRiskLevel is string && data.replyToRiskLevel.size() <= 20)) &&
+             data.isPinned is bool &&
+             data.isEdited is bool &&
+             data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 120 &&
+             data.visibility == 'VERIFIED_MEMBERS' &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidMessageReadReceipt(data) {
+      return data.messageId is string && data.messageId.size() >= 1 && data.messageId.size() <= 128 &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 120 &&
+             data.userEmail is string && data.userEmail.size() >= 3 && data.userEmail.size() <= 200 &&
+             data.userPhotoBase64 is string && data.userPhotoBase64.size() <= 500000 &&
+             isBoundedEmailList(data.adminEmails) &&
+             isValidTimestamp(data.viewedAt);
+    }
+
+    function isValidPricingConfig(data) {
+      return data.configType == 'PRICING' &&
+             data.planName is string && data.planName.size() >= 1 && data.planName.size() <= 120 &&
+             (data.priceInr is int || data.priceInr is float) && data.priceInr >= 0 && data.priceInr <= 10000000 &&
+             data.validityDays is int && data.validityDays >= 1 && data.validityDays <= 3650 &&
+             data.upiId is string && data.upiId.size() <= 150 &&
+             data.upiMobileNumber is string && data.upiMobileNumber.size() <= 50 &&
+             data.qrCodeBase64 is string && data.qrCodeBase64.size() <= 750000 &&
+             (!('qrOnlyMode' in data) || data.qrOnlyMode is bool) &&
+             (!('plan2Enabled' in data) || data.plan2Enabled is bool) &&
+             (!('plan2Name' in data) || (data.plan2Name is string && data.plan2Name.size() <= 120)) &&
+             (!('plan2PriceInr' in data) || ((data.plan2PriceInr is int || data.plan2PriceInr is float) && data.plan2PriceInr >= 0 && data.plan2PriceInr <= 10000000)) &&
+             (!('plan2ValidityDays' in data) || (data.plan2ValidityDays is int && data.plan2ValidityDays >= 1 && data.plan2ValidityDays <= 3650)) &&
+             (!('plan2QrCodeBase64' in data) || (data.plan2QrCodeBase64 is string && data.plan2QrCodeBase64.size() <= 750000)) &&
+             (!('plan2QrOnlyMode' in data) || data.plan2QrOnlyMode is bool) &&
+             (!('plan3Enabled' in data) || data.plan3Enabled is bool) &&
+             (!('plan3Name' in data) || (data.plan3Name is string && data.plan3Name.size() <= 120)) &&
+             (!('plan3PriceInr' in data) || ((data.plan3PriceInr is int || data.plan3PriceInr is float) && data.plan3PriceInr >= 0 && data.plan3PriceInr <= 10000000)) &&
+             (!('plan3ValidityDays' in data) || (data.plan3ValidityDays is int && data.plan3ValidityDays >= 1 && data.plan3ValidityDays <= 3650)) &&
+             (!('plan3QrCodeBase64' in data) || (data.plan3QrCodeBase64 is string && data.plan3QrCodeBase64.size() <= 750000)) &&
+             (!('plan3QrOnlyMode' in data) || data.plan3QrOnlyMode is bool) &&
+             (!('dailyReviewLimitPerUser' in data) || (data.dailyReviewLimitPerUser is int && data.dailyReviewLimitPerUser >= 1 && data.dailyReviewLimitPerUser <= 500)) &&
+             (!('commodityChatLocked' in data) || data.commodityChatLocked is bool) &&
+             data.trialDays is int && data.trialDays >= 1 && data.trialDays <= 30 &&
+             data.benefits is list && data.benefits.size() <= 10 &&
+             (data.benefits.size() == 0 || (data.benefits[0] is string && data.benefits[0].size() <= 200)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidAdminSettings(data) {
+      return data.configType == 'ADMIN_SETTINGS' &&
+             data.primaryAdminEmail == 'atharvagarg456@gmail.com' &&
+             isBoundedEmailList(data.adminEmails) &&
+             ('atharvagarg456@gmail.com' in data.adminEmails) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidAppConfig(data) {
+      return (data.configType == 'PRICING' && isValidPricingConfig(data)) ||
+             (data.configType == 'ADMIN_SETTINGS' && isValidAdminSettings(data));
+    }
+
+    function isValidAccessRequest(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() >= 3 && data.userEmail.size() <= 200 &&
+             data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 120 &&
+             data.userPhotoBase64 is string && data.userPhotoBase64.size() <= 750000 &&
+             data.deviceId is string && data.deviceId.size() >= 1 && data.deviceId.size() <= 128 &&
+             data.ipAddress is string && data.ipAddress.size() >= 1 && data.ipAddress.size() <= 100 &&
+             data.requestType in ['FREE_TRIAL_7D', 'PAID_UPI'] &&
+             (!('planName' in data) || (data.planName is string && data.planName.size() <= 120)) &&
+             (data.amountInr is int || data.amountInr is float) && data.amountInr >= 0 && data.amountInr <= 10000000 &&
+             data.validityDays is int && data.validityDays >= 1 && data.validityDays <= 3650 &&
+             data.utrReference is string && data.utrReference.size() >= 1 && data.utrReference.size() <= 120 &&
+             (!('paymentScreenshotBase64' in data) || (data.paymentScreenshotBase64 is string && data.paymentScreenshotBase64.size() <= 850000)) &&
+             data.status in ['PENDING', 'APPROVED', 'REJECTED'] &&
+             isBoundedEmailList(data.adminEmails) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidCommunityReview(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 120 &&
+             data.userPhotoBase64 is string && data.userPhotoBase64.size() <= 500000 &&
+             data.tradeMessageId is string && data.tradeMessageId.size() <= 128 &&
+             data.tradeMessageTitle is string && data.tradeMessageTitle.size() >= 1 && data.tradeMessageTitle.size() <= 200 &&
+             data.tradeRiskLevel in ['LOW', 'MEDIUM', 'HIGH'] &&
+             data.topicTag is string && data.topicTag.size() >= 1 && data.topicTag.size() <= 80 &&
+             data.publicContent is string && data.publicContent.size() >= 1 && data.publicContent.size() <= 2000 &&
+             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             data.hasBlurredWords is bool &&
+             (!('isPinned' in data) || data.isPinned is bool) &&
+             data.visibility == 'VERIFIED_MEMBERS' &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidModerationAlert(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() >= 3 && data.userEmail.size() <= 200 &&
+             data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 120 &&
+             data.userPhotoBase64 is string && data.userPhotoBase64.size() <= 500000 &&
+             data.deviceId is string && data.deviceId.size() >= 1 && data.deviceId.size() <= 128 &&
+             data.ipAddress is string && data.ipAddress.size() >= 1 && data.ipAddress.size() <= 100 &&
+             data.tradeMessageTitle is string && data.tradeMessageTitle.size() <= 200 &&
+             data.originalUneditedText is string && data.originalUneditedText.size() >= 1 && data.originalUneditedText.size() <= 2000 &&
+             data.blurredText is string && data.blurredText.size() >= 1 && data.blurredText.size() <= 2000 &&
+             data.detectedWords is string && data.detectedWords.size() >= 1 && data.detectedWords.size() <= 500 &&
+             data.status in ['OPEN', 'RESOLVED', 'BANNED'] &&
+             isBoundedEmailList(data.adminEmails) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    // 1. /users/{userId}
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isPrimaryAdmin() ||
+        (isVerifiedEmail() && request.auth.token.email in resource.data.adminEmails)
+      );
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'email', 'fullName', 'phoneNumber', 'city', 'photoBase64',
+                         'deviceId', 'deviceModel', 'ipAddress', 'accountStatus', 'entitlementStatus',
+                         'trialUsed', 'validUntilMillis', 'adminEmails', 'lastActiveAt', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'email', 'fullName', 'phoneNumber', 'city', 'photoBase64',
+                         'deviceId', 'deviceModel', 'ipAddress', 'accountStatus', 'entitlementStatus',
+                         'trialUsed', 'validUntilMillis', 'activePlanName', 'appLockPin',
+                         'securityQuestion', 'securityAnswer', 'termsAccepted', 'isCommodityMuted',
+                         'hasPendingProfileEdit', 'pendingFullName', 'pendingPhoneNumber', 'pendingCity', 'pendingPhotoBase64',
+                         'dailyReviewCount', 'lastReviewDate',
+                         'adminEmails', 'lastActiveAt', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming()) &&
+                       (
+                         isAdmin() ||
+                         (
+                           incoming().accountStatus == 'PENDING_APPROVAL' &&
+                           incoming().entitlementStatus == 'NONE' &&
+                           incoming().trialUsed == false &&
+                           incoming().validUntilMillis == 0
+                         )
+                       );
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt && (
+                         (
+                           isAdmin() &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'fullName', 'phoneNumber', 'city', 'photoBase64', 'deviceId', 'deviceModel',
+                             'ipAddress', 'accountStatus', 'entitlementStatus', 'trialUsed',
+                             'validUntilMillis', 'activePlanName', 'appLockPin',
+                             'securityQuestion', 'securityAnswer', 'termsAccepted', 'isCommodityMuted',
+                             'hasPendingProfileEdit', 'pendingFullName', 'pendingPhoneNumber', 'pendingCity', 'pendingPhotoBase64',
+                             'dailyReviewCount', 'lastReviewDate',
+                             'adminEmails', 'lastActiveAt', 'updatedAt'
+                           ])
+                         ) ||
+                         (
+                           request.auth.uid == userId &&
+                           existing().accountStatus != 'BANNED' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'lastActiveAt', 'ipAddress', 'deviceModel', 'appLockPin',
+                             'securityQuestion', 'securityAnswer', 'termsAccepted',
+                             'hasPendingProfileEdit', 'pendingFullName', 'pendingPhoneNumber', 'pendingCity', 'pendingPhotoBase64',
+                             'dailyReviewCount', 'lastReviewDate', 'updatedAt'
+                           ])
+                         ) ||
+                         (
+                           request.auth.uid == userId &&
+                           existing().accountStatus == 'PENDING_APPROVAL' &&
+                           incoming().accountStatus == 'PENDING_APPROVAL' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'fullName', 'phoneNumber', 'city', 'photoBase64', 'appLockPin',
+                             'securityQuestion', 'securityAnswer', 'termsAccepted',
+                             'ipAddress', 'deviceModel', 'lastActiveAt', 'updatedAt'
+                           ])
+                         ) ||
+                         (
+                           request.auth.uid == userId &&
+                           existing().accountStatus == 'APPROVED' &&
+                           existing().trialUsed == false &&
+                           incoming().trialUsed == true &&
+                           incoming().entitlementStatus == 'TRIAL_PENDING' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'entitlementStatus', 'trialUsed', 'lastActiveAt', 'updatedAt'
+                           ])
+                         ) ||
+                         (
+                           request.auth.uid == userId &&
+                           existing().accountStatus == 'APPROVED' &&
+                           incoming().entitlementStatus == 'EXPIRED' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'entitlementStatus', 'lastActiveAt', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(userId) && isAdmin();
+    }
+
+    // 2. /device_registry/{deviceId}
+    match /device_registry/{deviceId} {
+      allow get: if isSignedIn() && isValidId(deviceId);
+      allow list: if isSignedIn() && isPrimaryAdmin() && resource.data.deviceId is string;
+
+      allow create: if isSignedIn() &&
+                       isValidId(deviceId) &&
+                       incoming().deviceId == deviceId &&
+                       incoming().keys().hasAll([
+                         'deviceId', 'ipAddress', 'deviceModel', 'boundUserId',
+                         'trialClaimed', 'isBanned', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'deviceId', 'ipAddress', 'deviceModel', 'boundUserId',
+                         'trialClaimed', 'isBanned', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidDeviceRecord(incoming()) &&
+                       (
+                         isAdmin() ||
+                         (
+                           incoming().boundUserId == request.auth.uid &&
+                           incoming().isBanned == false
+                         )
+                       );
+
+      allow update: if isSignedIn() &&
+                       isValidId(deviceId) &&
+                       isValidDeviceRecord(incoming()) &&
+                       incoming().deviceId == existing().deviceId &&
+                       incoming().createdAt == existing().createdAt && (
+                         (
+                           isAdmin() &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'ipAddress', 'deviceModel', 'boundUserId', 'trialClaimed', 'isBanned', 'updatedAt'
+                           ])
+                         ) ||
+                         (
+                           existing().isBanned == false &&
+                           incoming().isBanned == false &&
+                           incoming().boundUserId == request.auth.uid &&
+                           (existing().trialClaimed == false || incoming().trialClaimed == true) &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'ipAddress', 'deviceModel', 'boundUserId', 'trialClaimed', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(deviceId) && isAdmin();
+    }
+
+    // 3. /broadcast_messages/{messageId}
+    match /broadcast_messages/{messageId} {
+      allow get: if isSignedIn() && isValidId(messageId) && resource.data.visibility == 'VERIFIED_MEMBERS';
+      allow list: if isSignedIn() && resource.data.visibility == 'VERIFIED_MEMBERS';
+
+      allow create: if isSignedIn() &&
+                       isValidId(messageId) &&
+                       isAdmin() &&
+                       incoming().authorId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'title', 'content', 'category', 'markedPhotoBase64', 'linkUrl', 'linkTitle',
+                         'isPinned', 'isEdited', 'authorId', 'authorName', 'visibility', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'title', 'content', 'category', 'riskLevel', 'markedPhotoBase64', 'linkUrl', 'linkTitle',
+                         'replyToMessageId', 'replyToTitle', 'replyToSnippet', 'replyToRiskLevel',
+                         'isPinned', 'isEdited', 'authorId', 'authorName', 'visibility', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidBroadcastMessage(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(messageId) &&
+                       isValidBroadcastMessage(incoming()) &&
+                       isAdmin() &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'title', 'content', 'category', 'riskLevel', 'markedPhotoBase64', 'linkUrl', 'linkTitle',
+                         'replyToMessageId', 'replyToTitle', 'replyToSnippet', 'replyToRiskLevel',
+                         'isPinned', 'isEdited', 'authorId', 'authorName', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(messageId) && isAdmin();
+    }
+
+    // 4. /message_views/{viewId}
+    match /message_views/{viewId} {
+      allow get: if isSignedIn() && isValidId(viewId) && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isPrimaryAdmin() ||
+        (isVerifiedEmail() && request.auth.token.email in resource.data.adminEmails)
+      );
+
+      allow create, update: if isSignedIn() &&
+                               isValidId(viewId) &&
+                               incoming().userId == request.auth.uid &&
+                               incoming().keys().hasAll([
+                                 'messageId', 'userId', 'userName', 'userEmail', 'userPhotoBase64',
+                                 'adminEmails', 'viewedAt'
+                               ]) &&
+                               incoming().keys().hasOnly([
+                                 'messageId', 'userId', 'userName', 'userEmail', 'userPhotoBase64',
+                                 'adminEmails', 'viewedAt'
+                               ]) &&
+                               isValidMessageReadReceipt(incoming());
+
+      allow delete: if isSignedIn() && isValidId(viewId) && isAdmin();
+    }
+
+    // 5. /app_config/{configId}
+    match /app_config/{configId} {
+      allow get: if isSignedIn() && isValidId(configId);
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(configId) &&
+                       isAdmin() &&
+                       isValidAppConfig(incoming()) && (
+                         (
+                           configId == 'pricing' &&
+                           incoming().keys().hasAll([
+                             'configType', 'planName', 'priceInr', 'validityDays', 'upiId',
+                             'upiMobileNumber', 'qrCodeBase64', 'trialDays', 'benefits', 'createdAt', 'updatedAt'
+                           ]) &&
+                           incoming().keys().hasOnly([
+                             'configType', 'planName', 'priceInr', 'validityDays', 'upiId',
+                             'upiMobileNumber', 'qrCodeBase64', 'qrOnlyMode',
+                             'plan2Enabled', 'plan2Name', 'plan2PriceInr', 'plan2ValidityDays', 'plan2QrCodeBase64', 'plan2QrOnlyMode',
+                             'plan3Enabled', 'plan3Name', 'plan3PriceInr', 'plan3ValidityDays', 'plan3QrCodeBase64', 'plan3QrOnlyMode',
+                             'dailyReviewLimitPerUser', 'commodityChatLocked', 'trialDays', 'benefits', 'createdAt', 'updatedAt'
+                           ])
+                         ) ||
+                         (
+                           configId == 'admin_settings' &&
+                           incoming().keys().hasAll([
+                             'configType', 'primaryAdminEmail', 'adminEmails', 'createdAt', 'updatedAt'
+                           ]) &&
+                           incoming().keys().hasOnly([
+                             'configType', 'primaryAdminEmail', 'adminEmails', 'createdAt', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow update: if isSignedIn() &&
+                       isValidId(configId) &&
+                       isValidAppConfig(incoming()) &&
+                       isAdmin() &&
+                       incoming().configType == existing().configType &&
+                       incoming().createdAt == existing().createdAt && (
+                         (
+                           configId == 'pricing' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'planName', 'priceInr', 'validityDays', 'upiId',
+                             'upiMobileNumber', 'qrCodeBase64', 'qrOnlyMode',
+                             'plan2Enabled', 'plan2Name', 'plan2PriceInr', 'plan2ValidityDays', 'plan2QrCodeBase64', 'plan2QrOnlyMode',
+                             'plan3Enabled', 'plan3Name', 'plan3PriceInr', 'plan3ValidityDays', 'plan3QrCodeBase64', 'plan3QrOnlyMode',
+                             'dailyReviewLimitPerUser', 'commodityChatLocked', 'trialDays', 'benefits', 'updatedAt'
+                           ])
+                         ) ||
+                         (
+                           configId == 'admin_settings' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'adminEmails', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if false;
+    }
+
+    // 6. /access_requests/{requestId}
+    match /access_requests/{requestId} {
+      allow get: if isSignedIn() && isValidId(requestId) && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isPrimaryAdmin() ||
+        (isVerifiedEmail() && request.auth.token.email in resource.data.adminEmails)
+      );
+
+      allow create: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'PENDING' &&
+                       incoming().keys().hasAll([
+                         'userId', 'userEmail', 'userName', 'userPhotoBase64', 'deviceId', 'ipAddress',
+                         'requestType', 'amountInr', 'validityDays', 'utrReference', 'status',
+                         'adminEmails', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'userEmail', 'userName', 'userPhotoBase64', 'deviceId', 'ipAddress',
+                         'requestType', 'planName', 'amountInr', 'validityDays', 'utrReference',
+                         'paymentScreenshotBase64', 'status',
+                         'adminEmails', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidAccessRequest(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       isValidAccessRequest(incoming()) &&
+                       isAdmin() &&
+                       existing().status == 'PENDING' &&
+                       incoming().status in ['APPROVED', 'REJECTED'] &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(requestId) && isAdmin();
+    }
+
+    // 7. /community_reviews/{reviewId}
+    match /community_reviews/{reviewId} {
+      allow get: if isSignedIn() && isValidId(reviewId) && resource.data.visibility == 'VERIFIED_MEMBERS';
+      allow list: if isSignedIn() && resource.data.visibility == 'VERIFIED_MEMBERS';
+
+      allow create: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'userName', 'userPhotoBase64', 'tradeMessageId', 'tradeMessageTitle',
+                         'tradeRiskLevel', 'topicTag', 'publicContent', 'rating', 'hasBlurredWords',
+                         'visibility', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'userName', 'userPhotoBase64', 'tradeMessageId', 'tradeMessageTitle',
+                         'tradeRiskLevel', 'topicTag', 'publicContent', 'rating', 'hasBlurredWords',
+                         'isPinned', 'visibility', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidCommunityReview(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       isValidCommunityReview(incoming()) &&
+                       isAdmin() &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['isPinned', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(reviewId) && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // 8. /moderation_alerts/{alertId}
+    match /moderation_alerts/{alertId} {
+      allow get: if isSignedIn() && isValidId(alertId) && isAdmin();
+
+      allow list: if isSignedIn() && (
+        isPrimaryAdmin() ||
+        (isVerifiedEmail() && request.auth.token.email in resource.data.adminEmails)
+      );
+
+      allow create: if isSignedIn() &&
+                       isValidId(alertId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'OPEN' &&
+                       incoming().keys().hasAll([
+                         'userId', 'userEmail', 'userName', 'userPhotoBase64', 'deviceId', 'ipAddress',
+                         'tradeMessageTitle', 'originalUneditedText', 'blurredText', 'detectedWords',
+                         'status', 'adminEmails', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'userEmail', 'userName', 'userPhotoBase64', 'deviceId', 'ipAddress',
+                         'tradeMessageTitle', 'originalUneditedText', 'blurredText', 'detectedWords',
+                         'status', 'adminEmails', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidModerationAlert(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(alertId) &&
+                       isValidModerationAlert(incoming()) &&
+                       isAdmin() &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(alertId) && isAdmin();
+    }
+
+    // 9. /presence/{userId}
+    match /presence/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && resource.data.visibility == 'PUBLIC_PRESENCE';
+      allow list: if isSignedIn() && resource.data.visibility == 'PUBLIC_PRESENCE';
+
+      allow create, update: if isSignedIn() &&
+                               isValidId(userId) &&
+                               request.auth.uid == userId &&
+                               incoming().userId == userId &&
+                               incoming().visibility == 'PUBLIC_PRESENCE' &&
+                               incoming().keys().hasAll(['userId', 'visibility', 'lastActiveAt', 'updatedAt']) &&
+                               incoming().keys().hasOnly(['userId', 'visibility', 'lastActiveAt', 'updatedAt']) &&
+                               isValidTimestamp(incoming().lastActiveAt) &&
+                               isValidTimestamp(incoming().updatedAt);
+
+      allow delete: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+    }
+  }
+}

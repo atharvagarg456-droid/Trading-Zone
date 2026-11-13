@@ -1,0 +1,206 @@
+{
+  "entities": {
+    "UserProfile": {
+      "collection": "/users/{userId}",
+      "description": "Verified member and admin profile with hardware telemetry, App Lock PIN, custom security question, and pending profile edit fields.",
+      "fields": {
+        "userId": { "type": "string", "required": true },
+        "email": { "type": "string", "required": true },
+        "fullName": { "type": "string", "required": true },
+        "phoneNumber": { "type": "string", "required": true },
+        "city": { "type": "string", "required": true },
+        "photoBase64": { "type": "string", "required": true },
+        "deviceId": { "type": "string", "required": true },
+        "deviceModel": { "type": "string", "required": true },
+        "ipAddress": { "type": "string", "required": true },
+        "accountStatus": { "type": "string", "required": true },
+        "entitlementStatus": { "type": "string", "required": true },
+        "trialUsed": { "type": "boolean", "required": true },
+        "validUntilMillis": { "type": "integer", "required": true },
+        "activePlanName": { "type": "string", "required": false },
+        "appLockPin": { "type": "string", "required": false },
+        "securityQuestion": { "type": "string", "required": false },
+        "securityAnswer": { "type": "string", "required": false },
+        "termsAccepted": { "type": "boolean", "required": false },
+        "isCommodityMuted": { "type": "boolean", "required": false },
+        "hasPendingProfileEdit": { "type": "boolean", "required": false },
+        "pendingFullName": { "type": "string", "required": false },
+        "pendingPhoneNumber": { "type": "string", "required": false },
+        "pendingCity": { "type": "string", "required": false },
+        "pendingPhotoBase64": { "type": "string", "required": false },
+        "dailyReviewCount": { "type": "integer", "required": false },
+        "lastReviewDate": { "type": "string", "required": false },
+        "adminEmails": { "type": "array", "required": true },
+        "lastActiveAt": { "type": "timestamp", "required": true },
+        "createdAt": { "type": "timestamp", "required": true },
+        "updatedAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "DeviceRecord": {
+      "collection": "/device_registry/{deviceId}",
+      "description": "Hardware device & IP anti-abuse registry enforcing 1-time 7-day free trial and permanent device bans.",
+      "fields": {
+        "deviceId": { "type": "string", "required": true },
+        "ipAddress": { "type": "string", "required": true },
+        "deviceModel": { "type": "string", "required": true },
+        "boundUserId": { "type": "string", "required": true },
+        "trialClaimed": { "type": "boolean", "required": true },
+        "isBanned": { "type": "boolean", "required": true },
+        "createdAt": { "type": "timestamp", "required": true },
+        "updatedAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "BroadcastMessage": {
+      "collection": "/broadcast_messages/{messageId}",
+      "description": "Official admin broadcast message with marked chart photo, risk level, and WhatsApp-style quoted reply fields.",
+      "fields": {
+        "title": { "type": "string", "required": true },
+        "content": { "type": "string", "required": true },
+        "category": { "type": "string", "required": true },
+        "riskLevel": { "type": "string", "required": false },
+        "markedPhotoBase64": { "type": "string", "required": true },
+        "linkUrl": { "type": "string", "required": true },
+        "linkTitle": { "type": "string", "required": true },
+        "replyToMessageId": { "type": "string", "required": false },
+        "replyToTitle": { "type": "string", "required": false },
+        "replyToSnippet": { "type": "string", "required": false },
+        "replyToRiskLevel": { "type": "string", "required": false },
+        "isPinned": { "type": "boolean", "required": true },
+        "isEdited": { "type": "boolean", "required": true },
+        "authorId": { "type": "string", "required": true },
+        "authorName": { "type": "string", "required": true },
+        "visibility": { "type": "string", "required": true },
+        "createdAt": { "type": "timestamp", "required": true },
+        "updatedAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "MessageReadReceipt": {
+      "collection": "/message_views/{viewId}",
+      "description": "Click-to-open read receipt recording which verified member opened a broadcast message and when.",
+      "fields": {
+        "messageId": { "type": "string", "required": true },
+        "userId": { "type": "string", "required": true },
+        "userName": { "type": "string", "required": true },
+        "userEmail": { "type": "string", "required": true },
+        "userPhotoBase64": { "type": "string", "required": true },
+        "adminEmails": { "type": "array", "required": true },
+        "viewedAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "PricingConfig": {
+      "collection": "/app_config/pricing",
+      "description": "Multi-plan UPI QR pricing configuration and Commodity chat lock state.",
+      "fields": {
+        "configType": { "type": "string", "required": true },
+        "planName": { "type": "string", "required": true },
+        "priceInr": { "type": "number", "required": true },
+        "validityDays": { "type": "integer", "required": true },
+        "upiId": { "type": "string", "required": true },
+        "upiMobileNumber": { "type": "string", "required": true },
+        "qrCodeBase64": { "type": "string", "required": true },
+        "qrOnlyMode": { "type": "boolean", "required": false },
+        "plan2Enabled": { "type": "boolean", "required": false },
+        "plan2Name": { "type": "string", "required": false },
+        "plan2PriceInr": { "type": "number", "required": false },
+        "plan2ValidityDays": { "type": "integer", "required": false },
+        "plan2QrCodeBase64": { "type": "string", "required": false },
+        "plan2QrOnlyMode": { "type": "boolean", "required": false },
+        "plan3Enabled": { "type": "boolean", "required": false },
+        "plan3Name": { "type": "string", "required": false },
+        "plan3PriceInr": { "type": "number", "required": false },
+        "plan3ValidityDays": { "type": "integer", "required": false },
+        "plan3QrCodeBase64": { "type": "string", "required": false },
+        "plan3QrOnlyMode": { "type": "boolean", "required": false },
+        "dailyReviewLimitPerUser": { "type": "integer", "required": false },
+        "commodityChatLocked": { "type": "boolean", "required": false },
+        "trialDays": { "type": "integer", "required": true },
+        "benefits": { "type": "array", "required": true },
+        "createdAt": { "type": "timestamp", "required": true },
+        "updatedAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "AdminSettings": {
+      "collection": "/app_config/admin_settings",
+      "description": "Delegated admin settings (up to 3 Google accounts).",
+      "fields": {
+        "configType": { "type": "string", "required": true },
+        "primaryAdminEmail": { "type": "string", "required": true },
+        "adminEmails": { "type": "array", "required": true },
+        "createdAt": { "type": "timestamp", "required": true },
+        "updatedAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "AccessRequest": {
+      "collection": "/access_requests/{requestId}",
+      "description": "7-day free trial or UPI QR payment verification request with screenshot and UTR.",
+      "fields": {
+        "userId": { "type": "string", "required": true },
+        "userEmail": { "type": "string", "required": true },
+        "userName": { "type": "string", "required": true },
+        "userPhotoBase64": { "type": "string", "required": true },
+        "deviceId": { "type": "string", "required": true },
+        "ipAddress": { "type": "string", "required": true },
+        "requestType": { "type": "string", "required": true },
+        "planName": { "type": "string", "required": false },
+        "amountInr": { "type": "number", "required": true },
+        "validityDays": { "type": "integer", "required": true },
+        "utrReference": { "type": "string", "required": true },
+        "paymentScreenshotBase64": { "type": "string", "required": false },
+        "status": { "type": "string", "required": true },
+        "adminEmails": { "type": "array", "required": true },
+        "createdAt": { "type": "timestamp", "required": true },
+        "updatedAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "CommunityReview": {
+      "collection": "/community_reviews/{reviewId}",
+      "description": "Commodity section message with Admin pinning and automatic word blurring.",
+      "fields": {
+        "userId": { "type": "string", "required": true },
+        "userName": { "type": "string", "required": true },
+        "userPhotoBase64": { "type": "string", "required": true },
+        "tradeMessageId": { "type": "string", "required": true },
+        "tradeMessageTitle": { "type": "string", "required": true },
+        "tradeRiskLevel": { "type": "string", "required": true },
+        "topicTag": { "type": "string", "required": true },
+        "publicContent": { "type": "string", "required": true },
+        "rating": { "type": "integer", "required": true },
+        "hasBlurredWords": { "type": "boolean", "required": true },
+        "isPinned": { "type": "boolean", "required": false },
+        "visibility": { "type": "string", "required": true },
+        "createdAt": { "type": "timestamp", "required": true },
+        "updatedAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "ModerationAlert": {
+      "collection": "/moderation_alerts/{alertId}",
+      "description": "Admin moderation alert for blocked phone numbers/IDs or blurred abusive words.",
+      "fields": {
+        "userId": { "type": "string", "required": true },
+        "userEmail": { "type": "string", "required": true },
+        "userName": { "type": "string", "required": true },
+        "userPhotoBase64": { "type": "string", "required": true },
+        "deviceId": { "type": "string", "required": true },
+        "ipAddress": { "type": "string", "required": true },
+        "tradeMessageTitle": { "type": "string", "required": true },
+        "originalUneditedText": { "type": "string", "required": true },
+        "blurredText": { "type": "string", "required": true },
+        "detectedWords": { "type": "string", "required": true },
+        "status": { "type": "string", "required": true },
+        "adminEmails": { "type": "array", "required": true },
+        "createdAt": { "type": "timestamp", "required": true },
+        "updatedAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "PresenceRecord": {
+      "collection": "/presence/{userId}",
+      "description": "Non-PII live online user counter heartbeat.",
+      "fields": {
+        "userId": { "type": "string", "required": true },
+        "visibility": { "type": "string", "required": true },
+        "lastActiveAt": { "type": "timestamp", "required": true },
+        "updatedAt": { "type": "timestamp", "required": true }
+      }
+    }
+  }
+}

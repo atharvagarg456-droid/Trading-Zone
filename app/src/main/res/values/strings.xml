@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Trading Zone</string>
+    <string name="no_network_banner_title">No Network Connected</string>
+    <string name="no_network_banner_subtitle">Please turn on mobile data or Wi-Fi for live broadcast &amp; commodity updates.</string>
+</resources>

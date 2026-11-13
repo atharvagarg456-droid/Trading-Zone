@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Trading Zone" />
+  <meta name="theme-color" content="#060B14" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Trading Zone — iPhone, iPad &amp; Web Live App</title>
+  <!-- Pure JS QR Generator for Permanent Website & APK QR Codes -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #060B14;
+      --surface: #0E1624;
+      --surface-elevated: #141F33;
+      --border: #1E2D45;
+      --text: #F8FAFC;
+      --muted: #94A3B8;
+      --emerald: #10B981;
+      --emerald-dim: rgba(16, 185, 129, 0.15);
+      --amber: #F59E0B;
+      --amber-dim: rgba(245, 158, 11, 0.15);
+      --crimson: #EF4444;
+      --crimson-dim: rgba(239, 68, 68, 0.16);
+      --blue: #3B82F6;
+      --blue-dim: rgba(59, 130, 246, 0.15);
+    }
+    body.light-mode {
+      --bg: #F1F5F9;
+      --surface: #FFFFFF;
+      --surface-elevated: #F8FAFC;
+      --border: #CBD5E1;
+      --text: #0F172A;
+      --muted: #475569;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", Roboto, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 92px;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow-x: hidden;
+    }
+    .app-shell {
+      max-width: 500px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(14, 22, 36, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+    }
+    body.light-mode .top-bar {
+      background: rgba(255, 255, 255, 0.92);
+    }
+    .top-bar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--emerald-dim);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--emerald);
+      font-weight: 900;
+      font-size: 18px;
+    }
+    .brand-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .pill-emerald {
+      background: var(--emerald-dim);
+      color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .pill-amber {
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+    .pill-crimson {
+      background: var(--crimson-dim);
+      color: var(--crimson);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+    .pill-blue {
+      background: var(--blue-dim);
+      color: var(--blue);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+    .icon-btn {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--emerald);
+      border-radius: 10px;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .offline-banner {
+      display: none;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(127, 29, 29, 0.92);
+      border: 1.5px solid var(--crimson);
+      color: #fff;
+      animation: fadeIn 0.25s ease;
+    }
+    .offline-banner.visible {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .content {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+    .screen {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      animation: smoothSlide 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .screen.active {
+      display: flex;
+    }
+    @keyframes smoothSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      transition: transform 0.16s ease, border-color 0.16s ease;
+    }
+    .card-pinned {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1.5px solid rgba(245, 158, 11, 0.55);
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .card-sub {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .quoted-reply {
+      background: var(--emerald-dim);
+      border-left: 3px solid var(--emerald);
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin: 8px 0;
+      font-size: 12px;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: opacity 0.15s ease, transform 0.1s ease;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn-primary {
+      background: var(--emerald);
+      color: #04130D;
+    }
+    .btn-amber {
+      background: var(--amber);
+      color: #181002;
+    }
+    .btn-crimson {
+      background: var(--crimson);
+      color: #fff;
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn-row > .btn {
+      flex: 1;
+      min-width: 110px;
+    }
+    .input, .textarea, .select {
+      width: 100%;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 11px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      outline: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    .input:focus, .textarea:focus {
+      border-color: var(--emerald);
+    }
+    .textarea {
+      min-height: 82px;
+      resize: vertical;
+    }
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .chip {
+      padding: 7px 13px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .chip.selected {
+      background: var(--emerald-dim);
+      color: var(--emerald);
+      border-color: var(--emerald);
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      background: rgba(14, 22, 36, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 6px calc(10px + env(safe-area-inset-bottom));
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    body.light-mode .bottom-nav {
+      background: rgba(255, 255, 255, 0.96);
+    }
+    .nav-item {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 10px;
+    }
+    .nav-item.active {
+      color: var(--emerald);
+      background: var(--emerald-dim);
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.76);
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      max-width: 440px;
+      width: 100%;
+      max-height: 88vh;
+      overflow-y: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .qr-box {
+      background: #fff;
+      padding: 14px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+    .toast {
+      position: fixed;
+      bottom: 88px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #10B981;
+      color: #04130D;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      z-index: 120;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    }
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid var(--emerald);
+      background: var(--surface-elevated);
+    }
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .chart-img {
+      width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-top: 8px;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- TOP APP BAR -->
+  <header class="top-bar">
+    <div class="top-bar-row">
+      <div class="brand">
+        <div class="brand-icon">TZ</div>
+        <div>
+          <div class="brand-title">Trading Zone</div>
+          <div class="brand-sub" id="topBarSubtitle">Apple iOS &amp; Web Live Edition</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <!-- Permanent QR & Share Button -->
+        <button class="icon-btn" onclick="openQrShareModal()" title="Share Apple Website &amp; Permanent QR">
+          <span>🔳</span><span>QR / Share</span>
+        </button>
+        <!-- Live Network / Status Pill -->
+        <span id="networkTopPill" class="pill pill-emerald">● ONLINE</span>
+      </div>
+    </div>
+
+    <!-- Prominent No-Network Banner (Issue #1 Fix) -->
+    <div id="offlineBanner" class="offline-banner">
+      <span style="font-size:22px;">📡</span>
+      <div style="flex:1;">
+        <div style="font-weight:800;font-size:13px;">No Network Connected • Device is Offline</div>
+        <div style="font-size:11px;opacity:0.9;">Turn on Mobile Data or Wi-Fi to receive instant "Trading Zone • 1 new message" alerts.</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="content">
+    <!-- GATE 1: GOOGLE SIGN-IN WELCOME -->
+    <section id="gateAuth" class="screen active">
+      <div class="card" style="text-align:center;padding:24px 18px;">
+        <div class="pill pill-emerald" style="margin-bottom:10px;">APPLE iPHONE • iPAD • ANDROID SYNCED</div>
+        <h1 style="font-size:22px;font-weight:900;margin-bottom:8px;">Trading Zone Live</h1>
+        <p class="card-sub" style="margin-bottom:16px;">
+          Sign in with your Google Account to access masked broadcast messages, the Commodity discussion stream, and multi-plan QR membership synced in real time with Android.
+        </p>
+        <button class="btn btn-primary" onclick="signInWithGoogle()" style="height:48px;font-size:15px;">
+          <span>🔐</span><span>Continue with Google Sign-In</span>
+        </button>
+        <div style="margin-top:12px;font-size:11px;color:var(--muted);">
+          Device ID: <span id="welcomeDeviceId"></span> • Primary Admin: atharvagarg456@gmail.com
+        </div>
+      </div>
+
+      <!-- Permanent Website QR Card right on Welcome screen too -->
+      <div class="card">
+        <div class="card-title">📲 Install on Apple iPhone / iPad or Scan QR</div>
+        <p class="card-sub">
+          On iPhone or iPad Safari, tap <strong>Share (⬆️) → Add to Home Screen</strong> to install Trading Zone like a native iOS app with instant alerts.
+        </p>
+        <div style="margin-top:10px;" class="btn-row">
+          <button class="btn btn-outline" onclick="openQrShareModal()">Show Permanent Website QR</button>
+          <button class="btn btn-outline" onclick="shareAppleWebsiteLink()">Share Apple Link</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GATE 2: APP LOCK PIN + SECURITY QUESTION SETUP / UNLOCK -->
+    <section id="gatePin" class="screen">
+      <div class="card">
+        <div class="pill pill-blue" style="margin-bottom:8px;">SESSION SECURITY GATE</div>
+        <div class="card-title" id="pinGateTitle">Unlock Trading Zone</div>
+        <p class="card-sub" id="pinGateSub" style="margin-bottom:12px;">
+          Enter your 4–8 digit App Lock PIN to unlock your session.
+        </p>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <input id="pinInput" type="password" inputmode="numeric" maxlength="8" class="input" placeholder="Enter 4–8 digit numeric PIN" />
+
+          <div id="pinSetupFields" style="display:none;flex-direction:column;gap:10px;">
+            <input id="secQuestionInput" type="text" class="input" value="What is my favorite commodity or stock?" placeholder="Custom Security Question" />
+            <input id="secAnswerInput" type="text" class="input" placeholder="Security Answer (for PIN recovery)" />
+          </div>
+
+          <button class="btn btn-primary" onclick="submitPinGate()">Unlock / Save App PIN</button>
+          <button id="forgotPinBtn" class="btn btn-outline" onclick="togglePinRecovery()">Forgot PIN? Recover with Security Answer</button>
+        </div>
+
+        <!-- Forgot PIN Recovery Box -->
+        <div id="pinRecoveryBox" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);flex-direction:column;gap:8px;">
+          <div style="font-size:12px;font-weight:700;color:var(--amber);" id="recoveryQuestionLabel">Question: What is my favorite commodity or stock?</div>
+          <input id="recoveryAnswerInput" type="text" class="input" placeholder="Enter your saved security answer" />
+          <input id="recoveryNewPinInput" type="password" inputmode="numeric" maxlength="8" class="input" placeholder="New 4–8 digit PIN" />
+          <button class="btn btn-amber" onclick="recoverPinWithAnswer()">Verify Answer &amp; Reset PIN</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GATE 3: MANDATORY PROFILE PHOTO & REGISTRATION -->
+    <section id="gateRegistration" class="screen">
+      <div class="card">
+        <div class="pill pill-emerald" style="margin-bottom:8px;">ONE-TIME MEMBER KYC</div>
+        <div class="card-title">Complete Mandatory Profile Registration</div>
+        <p class="card-sub" style="margin-bottom:12px;">
+          Upload your profile photo, contact details, and accept the Non-Liability &amp; No-Refund Terms.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <img id="regAvatarPreview" class="avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><rect width='60' height='60' fill='%23141F33'/></svg>" alt="Preview" />
+            <label class="btn btn-outline" style="flex:1;cursor:pointer;">
+              <span>📷 Choose Profile Photo</span>
+              <input type="file" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event, 'reg')" />
+            </label>
+          </div>
+          <input id="regName" class="input" placeholder="Full Name" />
+          <input id="regPhone" class="input" placeholder="Mobile Number (10 digits)" inputmode="tel" />
+          <input id="regCity" class="input" placeholder="City &amp; State" />
+          <input id="regQuestion" class="input" value="What is my favorite commodity or stock?" placeholder="Security Question" />
+          <input id="regAnswer" class="input" placeholder="Security Answer" />
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--muted);">
+            <input id="regTerms" type="checkbox" checked style="margin-top:3px;" />
+            <span>I accept the Trading Zone Non-Liability &amp; Strict No-Refund Policy (Operator: Atharva Garg).</span>
+          </label>
+          <button class="btn btn-primary" onclick="submitRegistration()">Submit Profile Registration</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GATE 4: ACCOUNT PENDING / BANNED STATUS -->
+    <section id="gateStatus" class="screen">
+      <div class="card" style="text-align:center;">
+        <div id="gateStatusBadge" class="pill pill-amber" style="margin-bottom:8px;">PENDING ADMIN APPROVAL</div>
+        <div class="card-title" id="gateStatusTitle">Account Verification Pending</div>
+        <p class="card-sub" id="gateStatusText" style="margin-bottom:14px;">
+          Your registration has been received. Once Admin approves your account, your stream and Commodity access will unlock automatically in real time.
+        </p>
+        <button class="btn btn-outline" onclick="signOutUser()">Sign Out</button>
+      </div>
+    </section>
+
+    <!-- MAIN TAB 1: BROADCAST MESSAGES STREAM -->
+    <section id="tabStream" class="screen">
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div style="font-size:12px;color:var(--emerald);font-weight:800;">● LIVE STREAM SYNCED</div>
+          <div class="card-title" id="streamWelcomeTitle">Masked Broadcast Advisories</div>
+          <div class="card-sub" id="streamSubStatus">Tap any notification card to reveal full message content</div>
+        </div>
+        <div style="text-align:right;">
+          <span class="pill pill-emerald" id="onlineCountBadge">1 Online</span>
+        </div>
+      </div>
+
+      <!-- Free Trial Banner if eligible -->
+      <div id="trialBannerCard" class="card" style="display:none;border-color:var(--emerald);">
+        <div class="card-title">🎁 Claim Your 1-Time 7-Day Free Trial</div>
+        <p class="card-sub" style="margin-bottom:10px;">
+          Unlock all masked broadcast messages and Commodity insights for 7 days on this device.
+        </p>
+        <button class="btn btn-primary" onclick="requestFreeTrial()">Activate 7-Day Free Trial</button>
+      </div>
+
+      <div id="broadcastList" style="display:flex;flex-direction:column;gap:12px;"></div>
+    </section>
+
+    <!-- MAIN TAB 2: CLEAN COMMODITY SECTION (NO STARS, NO RISK, PINNED MESSAGES, PHONE/ID AUTO-BLOCK) -->
+    <section id="tabCommodity" class="screen">
+      <!-- Strict No-Refund Identity Warning -->
+      <div class="card" style="border-color:rgba(245,158,11,0.5);background:rgba(245,158,11,0.08);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span class="pill pill-amber">⚠️ STRICT PRIVACY RULE</span>
+          <span class="pill pill-emerald" id="commodityOnlineBadge">1 Active</span>
+        </div>
+        <p class="card-sub" style="margin-top:6px;color:var(--text);">
+          Do <strong>NOT</strong> share phone numbers, emails, UPI IDs, or personal identity in Commodity. Attempted personal contact info is <strong>blocked automatically</strong> and alerts Admin for account ban with <strong>NO REFUND</strong>.
+        </p>
+      </div>
+
+      <!-- Commodity Composer -->
+      <div class="card" id="commodityComposerCard">
+        <div class="card-title">Post to Commodity Stream</div>
+        <div class="chip-row" style="margin:8px 0;">
+          <button class="chip selected" onclick="selectCommodityTag('MCX GOLD / SILVER', this)">MCX GOLD / SILVER</button>
+          <button class="chip" onclick="selectCommodityTag('CRUDE OIL / NATGAS', this)">CRUDE OIL / NATGAS</button>
+          <button class="chip" onclick="selectCommodityTag('NIFTY / BANKNIFTY', this)">NIFTY / BANKNIFTY</button>
+          <button class="chip" onclick="selectCommodityTag('GENERAL', this)">GENERAL</button>
+        </div>
+        <textarea id="commodityInput" class="textarea" placeholder="Share your commodity market view (No phone numbers, emails, or personal IDs)..."></textarea>
+        <div style="margin-top:10px;">
+          <button class="btn btn-primary" onclick="submitCommodityPost()">Post Commodity Message</button>
+        </div>
+      </div>
+
+      <div id="commodityList" style="display:flex;flex-direction:column;gap:12px;"></div>
+    </section>
+
+    <!-- MAIN TAB 3: MULTI-PLAN QR MEMBERSHIP -->
+    <section id="tabPlans" class="screen">
+      <div class="card">
+        <div class="pill pill-emerald" style="margin-bottom:6px;">OFFICIAL UPI QR MEMBERSHIP</div>
+        <div class="card-title">Select Subscription Plan</div>
+        <p class="card-sub">Scan the official UPI QR code, complete payment, and upload your UTR &amp; payment screenshot for instant Admin activation.</p>
+        <div class="chip-row" style="margin-top:10px;">
+          <button class="chip selected" id="planTab1" onclick="selectPlanSlot(1)">Plan #1 (Monthly)</button>
+          <button class="chip" id="planTab2" onclick="selectPlanSlot(2)">Plan #2 (Quarterly)</button>
+          <button class="chip" id="planTab3" onclick="selectPlanSlot(3)">Plan #3 (Half-Yearly)</button>
+        </div>
+      </div>
+
+      <div class="card" style="text-align:center;">
+        <div class="card-title" id="selectedPlanTitle">Monthly Pro Broadcast</div>
+        <div style="font-size:28px;font-weight:900;color:var(--emerald);margin:6px 0;" id="selectedPlanPrice">₹2499</div>
+        <div class="card-sub" id="selectedPlanValidity">30 Days Full Broadcast &amp; Commodity Access</div>
+
+        <div id="planQrContainer" style="margin:14px auto;"></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;" id="planUpiLabel">UPI ID: tradingzone@upi</div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;text-align:left;">
+          <input id="paymentUtrInput" class="input" placeholder="12-Digit UPI UTR / Reference Number" />
+          <label class="btn btn-outline" style="cursor:pointer;">
+            <span id="paymentProofLabel">📎 Attach UPI Payment Screenshot</span>
+            <input type="file" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event, 'payment')" />
+          </label>
+          <button class="btn btn-primary" onclick="submitUpiPaymentProof()">Submit Payment Proof for Verification</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">My Subscription &amp; Trial Requests</div>
+        <div id="myRequestsList" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+      </div>
+    </section>
+
+    <!-- MAIN TAB 4: SETTINGS, CUSTOM NOTIFICATIONS & PERMANENT WEBSITE QR -->
+    <section id="tabSettings" class="screen">
+      <!-- Member Profile Card + Edit Request -->
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img id="settingsAvatar" class="avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><rect width='60' height='60' fill='%23141F33'/></svg>" alt="Profile" />
+          <div style="flex:1;">
+            <div class="card-title" id="settingsUserName">Member</div>
+            <div class="card-sub" id="settingsUserEmail"></div>
+          </div>
+          <button class="btn btn-outline" style="width:auto;padding:8px 12px;" onclick="toggleProfileEditBox()">Edit</button>
+        </div>
+        <div id="pendingProfileEditBanner" style="display:none;margin-top:10px;" class="pill pill-amber">
+          ⏳ Profile update request awaiting Admin approval
+        </div>
+        <div id="profileEditBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);flex-direction:column;gap:8px;">
+          <div style="font-size:12px;font-weight:700;">Request Name / Photo Update (Admin Approved)</div>
+          <input id="editProfileName" class="input" placeholder="New Full Name" />
+          <input id="editProfilePhone" class="input" placeholder="New Mobile Number" />
+          <input id="editProfileCity" class="input" placeholder="New City" />
+          <label class="btn btn-outline" style="cursor:pointer;">
+            <span>📷 Choose New Profile Photo</span>
+            <input type="file" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event, 'profileEdit')" />
+          </label>
+          <button class="btn btn-primary" onclick="submitProfileEditRequest()">Send Update Request to Admin</button>
+        </div>
+      </div>
+
+      <!-- Permanent Website QR Code & Apple/Android Share Card -->
+      <div class="card" style="border-color:rgba(16,185,129,0.45);">
+        <div class="pill pill-emerald" style="margin-bottom:6px;">PERMANENT QR &amp; APPLE / ANDROID SHARE</div>
+        <div class="card-title">Permanent Website QR Code</div>
+        <p class="card-sub" style="margin-bottom:12px;">
+          Scan with any Apple iPhone, iPad, or Android camera to open Trading Zone immediately.
+        </p>
+        <div class="qr-box" id="settingsPermanentQrBox"></div>
+        <div style="font-size:11px;color:var(--emerald);text-align:center;margin:8px 0;word-break:break-all;" id="permanentWebUrlLabel">
+          https://atharvagarg456-droid.github.io/TradingCoLTD/
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="shareAppleWebsiteLink()">📤 Share Apple Website</button>
+          <button class="btn btn-outline" onclick="shareBothLinks()">📲 Share Both Links</button>
+        </div>
+      </div>
+
+      <!-- Customizable Notification Settings (Including 1-Hour Offline Reminder) -->
+      <div class="card">
+        <div class="card-title">🔔 Customizable Notification Center</div>
+        <p class="card-sub" style="margin-bottom:10px;">
+          Customize instant broadcast alerts ("Trading Zone • 1 new message") and the 1-hour offline mobile data reminder.
+        </p>
+        <div class="switch-row">
+          <div>
+            <div style="font-size:13px;font-weight:700;">Instant Broadcast Notifications</div>
+            <div class="card-sub">Show "Trading Zone • 1 new message" on new alerts</div>
+          </div>
+          <input type="checkbox" id="prefInstantNotif" checked onchange="saveNotifPrefs()" />
+        </div>
+        <div class="switch-row">
+          <div>
+            <div style="font-size:13px;font-weight:700;">1-Hour Offline Mobile Data Reminder</div>
+            <div class="card-sub">Alert me to connect mobile data if offline for 1 hour</div>
+          </div>
+          <input type="checkbox" id="prefOfflineReminder" checked onchange="saveNotifPrefs()" />
+        </div>
+        <div class="switch-row">
+          <div>
+            <div style="font-size:13px;font-weight:700;">Cycle Expiry Reminder (2 Days Left)</div>
+            <div class="card-sub">Remind before subscription or trial expires</div>
+          </div>
+          <input type="checkbox" id="prefExpiryNotif" checked onchange="saveNotifPrefs()" />
+        </div>
+        <div class="switch-row" style="border-bottom:none;">
+          <div>
+            <div style="font-size:13px;font-weight:700;">Daylight / Dark OLED Theme</div>
+            <div class="card-sub">Switch between Dark OLED and Daylight mode</div>
+          </div>
+          <button class="btn btn-outline" style="width:auto;padding:6px 12px;" onclick="toggleThemeMode()">Toggle Theme</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="btn-row">
+          <button class="btn btn-outline" onclick="lockSessionNow()">🔒 Lock App Now</button>
+          <button class="btn btn-crimson" onclick="signOutUser()">Sign Out</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN TAB 5: FULL ADMIN CONSOLE ON APPLE / WEB -->
+    <section id="tabAdmin" class="screen">
+      <div class="card">
+        <div class="pill pill-emerald" style="margin-bottom:6px;">ADMIN STUDIO • FULL CONTROL</div>
+        <div class="card-title">Publish Masked Broadcast Message</div>
+        <div id="adminReplyBanner" class="quoted-reply" style="display:none;"></div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+          <input id="adminMsgTitle" class="input" placeholder="Headline (e.g., GOLD MCX / NIFTY INTRADAY)" />
+          <textarea id="adminMsgBody" class="textarea" placeholder="Full Message Content (Hidden until member clicks to open)"></textarea>
+          <div class="btn-row">
+            <select id="adminMsgCategory" class="select" style="flex:1;">
+              <option value="INTRADAY">INTRADAY</option>
+              <option value="MCX">MCX</option>
+              <option value="OPTIONS">OPTIONS</option>
+              <option value="SWING">SWING</option>
+            </select>
+            <select id="adminMsgRisk" class="select" style="flex:1;">
+              <option value="MEDIUM">MEDIUM RISK</option>
+              <option value="LOW">LOW RISK</option>
+              <option value="HIGH">HIGH RISK</option>
+            </select>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;">
+            <input type="checkbox" id="adminMsgPinned" />
+            <span>📌 Pin Broadcast to Top of Stream</span>
+          </label>
+          <label class="btn btn-outline" style="cursor:pointer;">
+            <span id="adminChartLabel">📈 Attach Chart / Market Photo</span>
+            <input type="file" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event, 'adminChart')" />
+          </label>
+          <button class="btn btn-primary" onclick="adminPublishBroadcast()">🚀 Publish Broadcast Alert</button>
+        </div>
+      </div>
+
+      <!-- Admin Share Apple Website & Permanent QR Card -->
+      <div class="card" style="border-color:rgba(16,185,129,0.45);">
+        <div class="card-title">🍏 Share Apple Website &amp; Android APK with Members</div>
+        <p class="card-sub" style="margin-bottom:10px;">
+          Send the Apple iPhone/iPad Website link or show the Permanent QR Code directly to members.
+        </p>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="shareAppleWebsiteLink()">Share Apple Link</button>
+          <button class="btn btn-outline" onclick="openQrShareModal()">Full-Screen QR</button>
+        </div>
+      </div>
+
+      <!-- Admin Pending Approvals -->
+      <div class="card">
+        <div class="card-title">Pending Member &amp; Payment Approvals</div>
+        <div id="adminApprovalsList" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;"></div>
+      </div>
+
+      <!-- Admin Blocked Phone/ID Moderation Alerts -->
+      <div class="card">
+        <div class="card-title">🛡️ Blocked Phone/ID &amp; Moderation Alerts</div>
+        <div id="adminAlertsList" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;"></div>
+      </div>
+
+      <!-- Admin Member Directory (App Lock PIN & Security Q/A Inspector) -->
+      <div class="card">
+        <div class="card-title">👥 Member Directory (PIN &amp; Security Q/A)</div>
+        <div id="adminUsersList" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav id="bottomNav" class="bottom-nav" style="display:none;">
+    <button class="nav-item active" data-tab="tabStream" onclick="switchTab('tabStream', this)">
+      <span>📢</span><span>Messages</span>
+    </button>
+    <button class="nav-item" data-tab="tabCommodity" onclick="switchTab('tabCommodity', this)">
+      <span>💬</span><span>Commodity</span>
+    </button>
+    <button class="nav-item" data-tab="tabPlans" onclick="switchTab('tabPlans', this)">
+      <span>💳</span><span>Plans</span>
+    </button>
+    <button class="nav-item" data-tab="tabSettings" onclick="switchTab('tabSettings', this)">
+      <span>⚙️</span><span>Settings</span>
+    </button>
+    <button class="nav-item" id="navAdminBtn" data-tab="tabAdmin" style="display:none;" onclick="switchTab('tabAdmin', this)">
+      <span>🛡️</span><span>Admin</span>
+    </button>
+  </nav>
+</div>
+
+<!-- MODAL: PERMANENT WEBSITE QR & SHARE HUB -->
+<div id="qrShareModal" class="modal-backdrop" onclick="if(event.target===this)closeQrShareModal()">
+  <div class="modal-card" style="text-align:center;">
+    <div class="pill pill-emerald" style="margin:0 auto;">PERMANENT QR CODE • APPLE &amp; ANDROID</div>
+    <div class="card-title" style="font-size:18px;">Scan to Open Trading Zone</div>
+    <p class="card-sub">
+      Point any Apple iPhone, iPad, or Android camera at this permanent QR code to launch Trading Zone.
+    </p>
+    <div class="chip-row" style="justify-content:center;">
+      <button class="chip selected" id="qrTabApple" onclick="switchModalQrTarget('apple')">🍏 Apple Website QR</button>
+      <button class="chip" id="qrTabAndroid" onclick="switchModalQrTarget('android')">🤖 Android APK QR</button>
+    </div>
+    <div class="qr-box" id="modalQrBox"></div>
+    <div style="font-size:11px;color:var(--emerald);word-break:break-all;" id="modalQrUrlText"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="shareAppleWebsiteLink()">📤 Share Apple Website</button>
+      <button class="btn btn-outline" onclick="copyCurrentQrLink()">📋 Copy Link</button>
+    </div>
+    <button class="btn btn-outline" onclick="closeQrShareModal()">Close</button>
+  </div>
+</div>
+
+<!-- MODAL: ADMIN "SEEN BY" READ RECEIPT INSPECTOR -->
+<div id="seenByModal" class="modal-backdrop" onclick="if(event.target===this)closeSeenByModal()">
+  <div class="modal-card">
+    <div class="card-title" id="seenByModalTitle">Message Read Receipts</div>
+    <div id="seenByModalList" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <button class="btn btn-outline" onclick="closeSeenByModal()">Close</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- REAL FIREBASE AUTH + FIRESTORE LIVE INTEGRATION -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signInWithRedirect,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+  import {
+    initializeFirestore,
+    collection,
+    doc,
+    getDoc,
+    setDoc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    onSnapshot,
+    query
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBnxx08FwBVRDU_7e5Dd5Md0IPhL2xFht4",
+    authDomain: "gen-lang-client-0086453376.firebaseapp.com",
+    projectId: "gen-lang-client-0086453376",
+    storageBucket: "gen-lang-client-0086453376.firebasestorage.app",
+    messagingSenderId: "225095067428",
+    appId: "1:225095067428:android:ef61f2435c0f1e37d1f5b1"
+  };
+  const DATABASE_ID = "ai-studio-android-tradingc-48996c14-8181-489f-8651-4b2951ae5d4c";
+  const PRIMARY_ADMIN_EMAIL = "atharvagarg456@gmail.com";
+
+  const PERMANENT_APPLE_WEB_URL = "https://atharvagarg456-droid.github.io/TradingCoLTD/";
+  const PERMANENT_ANDROID_APK_URL = "https://github.com/atharvagarg456-droid/TradingCoLTD/raw/main/Trading-Zone.apk";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = initializeFirestore(app, {}, DATABASE_ID);
+
+  // Persistent Device ID
+  let deviceId = localStorage.getItem("tz_device_id");
+  if (!deviceId) {
+    deviceId = "IOS-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+    localStorage.setItem("tz_device_id", deviceId);
+  }
+  document.getElementById("welcomeDeviceId").textContent = deviceId;
+
+  // State
+  let currentUser = null;
+  let userProfile = null;
+  let adminSettings = { adminEmails: [PRIMARY_ADMIN_EMAIL] };
+  let pricingConfig = {
+    planName: "Monthly Pro Broadcast",
+    priceInr: 2499,
+    validityDays: 30,
+    upiId: "tradingzone@upi",
+    qrCodeBase64: "",
+    plan2Name: "Quarterly Pro Access",
+    plan2PriceInr: 5999,
+    plan2ValidityDays: 90,
+    plan2QrCodeBase64: "",
+    plan3Name: "Half-Yearly Institutional",
+    plan3PriceInr: 9999,
+    plan3ValidityDays: 180,
+    plan3QrCodeBase64: "",
+    commodityChatLocked: false
+  };
+  let broadcastMessages = [];
+  let communityReviews = [];
+  let openedMessageIds = new Set(JSON.parse(localStorage.getItem("tz_opened_msgs") || "[]"));
+  let allReceipts = [];
+  let allUsers = [];
+  let allRequests = [];
+  let moderationAlerts = [];
+  let isSessionUnlocked = false;
+  let selectedCommodityTag = "MCX GOLD / SILVER";
+  let selectedPlanSlot = 1;
+  let uploadedPhotos = { reg: "", payment: "", profileEdit: "", adminChart: "" };
+  let replyingToBroadcast = null;
+  let currentModalQrTarget = "apple";
+  let unsubscribers = [];
+
+  // Toast helper
+  window.showToast = function(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => { t.style.display = "none"; }, 3200);
+  };
+
+  // Render QR helper using qrcode-generator
+  function renderQrIntoElement(elementId, text, cellSize = 5) {
+    const container = document.getElementById(elementId);
+    if (!container || typeof qrcode === "undefined") return;
+    try {
+      const qr = qrcode(0, "M");
+      qr.addData(text);
+      qr.make();
+      container.innerHTML = qr.createImgTag(cellSize, 8);
+    } catch (e) {
+      container.textContent = text;
+    }
+  }
+
+  // Initialize Permanent QR codes
+  renderQrIntoElement("settingsPermanentQrBox", PERMANENT_APPLE_WEB_URL, 5);
+  renderQrIntoElement("modalQrBox", PERMANENT_APPLE_WEB_URL, 6);
+  document.getElementById("modalQrUrlText").textContent = PERMANENT_APPLE_WEB_URL;
+
+  window.openQrShareModal = function() {
+    document.getElementById("qrShareModal").classList.add("open");
+    window.switchModalQrTarget(currentModalQrTarget);
+  };
+  window.closeQrShareModal = function() {
+    document.getElementById("qrShareModal").classList.remove("open");
+  };
+  window.switchModalQrTarget = function(target) {
+    currentModalQrTarget = target;
+    document.getElementById("qrTabApple").classList.toggle("selected", target === "apple");
+    document.getElementById("qrTabAndroid").classList.toggle("selected", target === "android");
+    const url = target === "apple" ? PERMANENT_APPLE_WEB_URL : PERMANENT_ANDROID_APK_URL;
+    renderQrIntoElement("modalQrBox", url, 6);
+    document.getElementById("modalQrUrlText").textContent = url;
+  };
+  window.copyCurrentQrLink = function() {
+    const url = currentModalQrTarget === "apple" ? PERMANENT_APPLE_WEB_URL : PERMANENT_ANDROID_APK_URL;
+    navigator.clipboard?.writeText(url);
+    showToast("Link copied to clipboard!");
+  };
+  window.shareAppleWebsiteLink = async function() {
+    const text = `📈 Join Trading Zone on Apple iPhone, iPad & Web:\n${PERMANENT_APPLE_WEB_URL}\n\n(On iPhone Safari, tap Share -> Add to Home Screen for full app mode)`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Trading Zone — Apple Website", text, url: PERMANENT_APPLE_WEB_URL });
+        return;
+      } catch (_) {}
+    }
+    navigator.clipboard?.writeText(text);
+    showToast("Apple Website share link copied!");
+  };
+  window.shareBothLinks = async function() {
+    const text = `📈 Trading Zone — Official App & Website Links\n\n🍏 Apple iPhone / iPad Website:\n${PERMANENT_APPLE_WEB_URL}\n\n🤖 Android APK Download:\n${PERMANENT_ANDROID_APK_URL}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Trading Zone Links", text, url: PERMANENT_APPLE_WEB_URL });
+        return;
+      } catch (_) {}
+    }
+    navigator.clipboard?.writeText(text);
+    showToast("Apple & Android links copied!");
+  };
+
+  // Issue #1 & #2: Live Offline / No-Network Monitor + 1-Hour Offline Reminder Notification
+  let offlineTimer = null;
+  function updateNetworkUI() {
+    const online = navigator.onLine;
+    const pill = document.getElementById("networkTopPill");
+    const banner = document.getElementById("offlineBanner");
+    if (!online) {
+      pill.className = "pill pill-crimson";
+      pill.textContent = "📡 NO NETWORK";
+      banner.classList.add("visible");
+      if (!offlineTimer) {
+        offlineTimer = setTimeout(() => {
+          if (!navigator.onLine && localStorage.getItem("tz_pref_offline") !== "false") {
+            triggerBrowserNotification("Trading Zone • Connect Mobile Data", "Your device has been offline for 1 hour. Connect Mobile Data or Wi-Fi for instant Trading Zone notifications.");
+          }
+        }, 3600 * 1000);
+      }
+    } else {
+      pill.className = "pill pill-emerald";
+      pill.textContent = isUserAdmin() ? "ADMIN • LIVE" : "● ONLINE";
+      banner.classList.remove("visible");
+      if (offlineTimer) {
+        clearTimeout(offlineTimer);
+        offlineTimer = null;
+      }
+    }
+  }
+  window.addEventListener("online", updateNetworkUI);
+  window.addEventListener("offline", updateNetworkUI);
+  updateNetworkUI();
+
+  function triggerBrowserNotification(title, body) {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body });
+    } else {
+      showToast(title);
+    }
+  }
+
+  // Image file to compressed base64
+  window.handlePhotoUpload = function(event, slot) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement("canvas");
+        const maxDim = slot === "adminChart" || slot === "payment" ? 720 : 320;
+        let w = img.width, h = img.height;
+        if (w > h && w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
+        else if (h >= w && h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.72);
+        const rawBase64 = dataUrl.split(",")[1] || "";
+        uploadedPhotos[slot] = rawBase64;
+        if (slot === "reg") {
+          document.getElementById("regAvatarPreview").src = dataUrl;
+        } else if (slot === "payment") {
+          document.getElementById("paymentProofLabel").textContent = "✅ Payment Screenshot Attached";
+        } else if (slot === "adminChart") {
+          document.getElementById("adminChartLabel").textContent = "✅ Chart Photo Attached";
+        }
+        showToast("Photo attached!");
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  function isUserAdmin() {
+    if (!currentUser?.email) return false;
+    const email = currentUser.email.toLowerCase();
+    return email === PRIMARY_ADMIN_EMAIL.toLowerCase() ||
+      (adminSettings.adminEmails || []).some(e => e.toLowerCase() === email);
+  }
+
+  function isEntitled() {
+    if (isUserAdmin()) return true;
+    if (!userProfile) return false;
+    if (userProfile.accountStatus !== "APPROVED") return false;
+    const st = userProfile.entitlementStatus;
+    if (st !== "TRIAL_ACTIVE" && st !== "PAID_ACTIVE") return false;
+    return Number(userProfile.subscriptionExpiresAtMillis || 0) > Date.now();
+  }
+
+  function daysRemaining(profile) {
+    const exp = Number(profile?.subscriptionExpiresAtMillis || 0);
+    const diff = exp - Date.now();
+    return diff <= 0 ? 0 : Math.ceil(diff / (24 * 3600 * 1000));
+  }
+
+  // Google Sign-In
+  window.signInWithGoogle = async function() {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      if (err?.code === "auth/popup-blocked" || err?.code === "auth/operation-not-supported-in-this-environment") {
+        await signInWithRedirect(auth, provider);
+      } else {
+        showToast(err?.message || "Google Sign-In error");
+      }
+    }
+  };
+
+  window.signOutUser = async function() {
+    isSessionUnlocked = false;
+    await signOut(auth);
+    showScreen("gateAuth");
+    document.getElementById("bottomNav").style.display = "none";
+  };
+
+  function showScreen(screenId) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(screenId)?.classList.add("active");
+  }
+
+  window.switchTab = function(tabId, btn) {
+    showScreen(tabId);
+    document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+  };
+
+  // Auth state listener
+  onAuthStateChanged(auth, (user) => {
+    unsubscribers.forEach(u => u());
+    unsubscribers = [];
+    currentUser = user;
+    if (!user) {
+      document.getElementById("bottomNav").style.display = "none";
+      showScreen("gateAuth");
+      return;
+    }
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+    startRealtimeListeners(user);
+  });
+
+  function startRealtimeListeners(user) {
+    // 1. Admin settings
+    unsubscribers.push(onSnapshot(doc(db, "app_config", "admin_settings"), (snap) => {
+      if (snap.exists()) adminSettings = snap.data();
+      evaluateNavigationGates();
+    }));
+
+    // 2. Pricing config
+    unsubscribers.push(onSnapshot(doc(db, "app_config", "pricing"), (snap) => {
+      if (snap.exists()) {
+        pricingConfig = { ...pricingConfig, ...snap.data() };
+        renderPlansTab();
+      }
+    }));
+
+    // 3. Current User profile
+    unsubscribers.push(onSnapshot(doc(db, "users", user.uid), (snap) => {
+      userProfile = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+      evaluateNavigationGates();
+      renderSettingsProfile();
+    }));
+
+    // 4. Broadcast Messages
+    let initMsgs = false;
+    unsubscribers.push(onSnapshot(collection(db, "broadcast_messages"), (snap) => {
+      const list = [];
+      snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+      list.sort((a, b) => {
+        if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1;
+        return Number(b.createdAtMillis || 0) - Number(a.createdAtMillis || 0);
+      });
+      if (initMsgs && list.length > broadcastMessages.length && localStorage.getItem("tz_pref_instant") !== "false") {
+        triggerBrowserNotification("Trading Zone • 1 new message", "Tap to open Trading Zone and view the message.");
+      }
+      initMsgs = true;
+      broadcastMessages = list;
+      renderBroadcastStream();
+    }));
+
+    // 5. Commodity Reviews (No star rating, no risk badge, supports pinned messages)
+    unsubscribers.push(onSnapshot(collection(db, "community_reviews"), (snap) => {
+      const list = [];
+      snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+      list.sort((a, b) => {
+        if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1;
+        return Number(b.createdAtMillis || 0) - Number(a.createdAtMillis || 0);
+      });
+      communityReviews = list;
+      renderCommodityStream();
+    }));
+
+    // 6. Access Requests
+    unsubscribers.push(onSnapshot(collection(db, "access_requests"), (snap) => {
+      const list = [];
+      snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+      list.sort((a, b) => Number(b.createdAtMillis || 0) - Number(a.createdAtMillis || 0));
+      allRequests = list;
+      renderPlansTab();
+      if (isUserAdmin()) renderAdminPanel();
+    }));
+  }
+
+  let adminListenersStarted = false;
+  function ensureAdminListeners() {
+    if (adminListenersStarted || !isUserAdmin()) return;
+    adminListenersStarted = true;
+    unsubscribers.push(onSnapshot(collection(db, "users"), (snap) => {
+      const list = [];
+      snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+      allUsers = list;
+      renderAdminPanel();
+    }));
+    unsubscribers.push(onSnapshot(collection(db, "moderation_alerts"), (snap) => {
+      const list = [];
+      snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+      list.sort((a, b) => Number(b.createdAtMillis || 0) - Number(a.createdAtMillis || 0));
+      moderationAlerts = list;
+      renderAdminPanel();
+    }));
+    unsubscribers.push(onSnapshot(collection(db, "message_views"), (snap) => {
+      const list = [];
+      snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+      allReceipts = list;
+      renderBroadcastStream();
+    }));
+  }
+
+  function evaluateNavigationGates() {
+    if (!currentUser) {
+      showScreen("gateAuth");
+      document.getElementById("bottomNav").style.display = "none";
+      return;
+    }
+    updateNetworkUI();
+    const savedPin = localStorage.getItem("tz_pin_" + currentUser.uid) || userProfile?.appLockPin || "";
+    if (!isSessionUnlocked) {
+      document.getElementById("bottomNav").style.display = "none";
+      const setupFields = document.getElementById("pinSetupFields");
+      if (!savedPin) {
+        document.getElementById("pinGateTitle").textContent = "Create Your 4–8 Digit App Lock PIN";
+        document.getElementById("pinGateSub").textContent = "Set a numeric PIN and recovery question to protect your Trading Zone account.";
+        setupFields.style.display = "flex";
+        document.getElementById("forgotPinBtn").style.display = "none";
+      } else {
+        document.getElementById("pinGateTitle").textContent = "Unlock Trading Zone";
+        document.getElementById("pinGateSub").textContent = "Enter your 4–8 digit App Lock PIN to continue.";
+        setupFields.style.display = "none";
+        document.getElementById("forgotPinBtn").style.display = "inline-flex";
+        const q = userProfile?.securityQuestion || localStorage.getItem("tz_sec_q_" + currentUser.uid) || "What is my favorite commodity or stock?";
+        document.getElementById("recoveryQuestionLabel").textContent = "Question: " + q;
+      }
+      showScreen("gatePin");
+      return;
+    }
+
+    if (!userProfile || !userProfile.fullName) {
+      document.getElementById("bottomNav").style.display = "none";
+      document.getElementById("regName").value = currentUser.displayName || "";
+      showScreen("gateRegistration");
+      return;
+    }
+
+    if (userProfile.accountStatus === "BANNED") {
+      document.getElementById("bottomNav").style.display = "none";
+      document.getElementById("gateStatusBadge").className = "pill pill-crimson";
+      document.getElementById("gateStatusBadge").textContent = "ACCOUNT & DEVICE SUSPENDED";
+      document.getElementById("gateStatusTitle").textContent = "Access Permanently Suspended";
+      document.getElementById("gateStatusText").textContent = "Your account or device was suspended for violating platform rules (No Refund Policy).";
+      showScreen("gateStatus");
+      return;
+    }
+
+    if (!isUserAdmin() && userProfile.accountStatus !== "APPROVED") {
+      document.getElementById("bottomNav").style.display = "none";
+      document.getElementById("gateStatusBadge").className = "pill pill-amber";
+      document.getElementById("gateStatusBadge").textContent = "WAITING FOR ADMIN APPROVAL";
+      document.getElementById("gateStatusTitle").textContent = "Registration Submitted";
+      document.getElementById("gateStatusText").textContent = "Admin is verifying your profile photo and registration details. This screen unlocks automatically once approved.";
+      showScreen("gateStatus");
+      return;
+    }
+
+    // Approved or Admin -> Show main workspace
+    document.getElementById("bottomNav").style.display = "flex";
+    document.getElementById("navAdminBtn").style.display = isUserAdmin() ? "flex" : "none";
+    if (isUserAdmin()) ensureAdminListeners();
+
+    const activeScreen = document.querySelector(".screen.active")?.id || "";
+    if (activeScreen.startsWith("gate")) {
+      showScreen("tabStream");
+    }
+    renderBroadcastStream();
+    renderCommodityStream();
+    renderPlansTab();
+  }
+
+  // PIN Gate Actions
+  window.submitPinGate = async function() {
+    const pin = document.getElementById("pinInput").value.trim();
+    if (pin.length < 4 || !/^\d+$/.test(pin)) {
+      showToast("Enter a valid 4–8 digit numeric PIN");
+      return;
+    }
+    const savedPin = localStorage.getItem("tz_pin_" + currentUser.uid) || userProfile?.appLockPin || "";
+    if (!savedPin) {
+      const q = document.getElementById("secQuestionInput").value.trim() || "What is my favorite commodity or stock?";
+      const a = document.getElementById("secAnswerInput").value.trim();
+      if (!a) {
+        showToast("Please enter a recovery answer");
+        return;
+      }
+      localStorage.setItem("tz_pin_" + currentUser.uid, pin);
+      localStorage.setItem("tz_sec_q_" + currentUser.uid, q);
+      localStorage.setItem("tz_sec_a_" + currentUser.uid, a.toLowerCase());
+      isSessionUnlocked = true;
+      if (userProfile) {
+        try {
+          await updateDoc(doc(db, "users", currentUser.uid), { appLockPin: pin, securityQuestion: q, securityAnswer: a });
+        } catch (_) {}
+      }
+      evaluateNavigationGates();
+    } else {
+      if (pin === savedPin || pin === userProfile?.appLockPin) {
+        localStorage.setItem("tz_pin_" + currentUser.uid, pin);
+        isSessionUnlocked = true;
+        document.getElementById("pinInput").value = "";
+        evaluateNavigationGates();
+      } else {
+        showToast("Incorrect App Lock PIN");
+      }
+    }
+  };
+
+  window.togglePinRecovery = function() {
+    const box = document.getElementById("pinRecoveryBox");
+    box.style.display = box.style.display === "none" ? "flex" : "none";
+  };
+
+  window.recoverPinWithAnswer = async function() {
+    const ans = document.getElementById("recoveryAnswerInput").value.trim().toLowerCase();
+    const newPin = document.getElementById("recoveryNewPinInput").value.trim();
+    const expected = (userProfile?.securityAnswer || localStorage.getItem("tz_sec_a_" + currentUser.uid) || "").trim().toLowerCase();
+    if (!ans || ans !== expected) {
+      showToast("Security answer does not match");
+      return;
+    }
+    if (newPin.length < 4 || !/^\d+$/.test(newPin)) {
+      showToast("Enter a 4–8 digit new PIN");
+      return;
+    }
+    localStorage.setItem("tz_pin_" + currentUser.uid, newPin);
+    if (userProfile) {
+      try {
+        await updateDoc(doc(db, "users", currentUser.uid), { appLockPin: newPin });
+      } catch (_) {}
+    }
+    isSessionUnlocked = true;
+    showToast("PIN reset and session unlocked!");
+    evaluateNavigationGates();
+  };
+
+  window.lockSessionNow = function() {
+    isSessionUnlocked = false;
+    evaluateNavigationGates();
+  };
+
+  // Registration Submit
+  window.submitRegistration = async function() {
+    const fullName = document.getElementById("regName").value.trim();
+    const phone = document.getElementById("regPhone").value.trim();
+    const city = document.getElementById("regCity").value.trim();
+    const q = document.getElementById("regQuestion").value.trim() || "What is my favorite commodity or stock?";
+    const a = document.getElementById("regAnswer").value.trim();
+    const terms = document.getElementById("regTerms").checked;
+    if (!fullName || phone.length < 10 || !city || !a || !terms) {
+      showToast("Complete all fields and accept Terms");
+      return;
+    }
+    const admin = isUserAdmin();
+    const now = Date.now();
+    const pin = localStorage.getItem("tz_pin_" + currentUser.uid) || "1234";
+    const profileDoc = {
+      userId: currentUser.uid,
+      email: currentUser.email || "",
+      fullName,
+      phoneNumber: phone,
+      city,
+      photoBase64: uploadedPhotos.reg || "",
+      role: admin ? "ADMIN" : "USER",
+      accountStatus: admin ? "APPROVED" : "PENDING_APPROVAL",
+      entitlementStatus: admin ? "PAID_ACTIVE" : "NONE",
+      activePlanName: admin ? "Admin Lifetime" : "",
+      trialClaimed: false,
+      subscriptionExpiresAtMillis: admin ? now + 3650 * 86400000 : 0,
+      deviceId,
+      deviceModel: navigator.platform || "Apple iOS Safari",
+      ipAddress: "Web-Client",
+      securityQuestion: q,
+      securityAnswer: a,
+      appLockPin: pin,
+      termsAccepted: true,
+      termsAcceptedAtMillis: now,
+      isCommodityMuted: false,
+      dailyCommodityCount: 0,
+      dailyCommodityDate: "",
+      hasPendingProfileEdit: false,
+      pendingFullName: "",
+      pendingPhoneNumber: "",
+      pendingCity: "",
+      pendingPhotoBase64: "",
+      pendingEditRequestedAtMillis: 0,
+      lastActiveAtMillis: now,
+      createdAtMillis: now
+    };
+    try {
+      await setDoc(doc(db, "users", currentUser.uid), profileDoc);
+      await setDoc(doc(db, "device_registry", deviceId), {
+        deviceId,
+        boundUserId: currentUser.uid,
+        boundUserEmail: currentUser.email || "",
+        deviceModel: navigator.platform || "Apple iOS Safari",
+        ipAddress: "Web-Client",
+        trialClaimed: false,
+        isBanned: false,
+        banReason: "",
+        updatedAtMillis: now
+      });
+      showToast(admin ? "Admin profile activated!" : "Registration submitted for Admin approval!");
+    } catch (err) {
+      showToast(err?.message || "Failed to save registration");
+    }
+  };
+
+  // Render Broadcast Stream
+  function renderBroadcastStream() {
+    const listEl = document.getElementById("broadcastList");
+    if (!listEl) return;
+    const entitled = isEntitled();
+    const days = daysRemaining(userProfile);
+    document.getElementById("streamSubStatus").textContent = isUserAdmin()
+      ? "Admin Mode • Full Read Receipt & Reply Controls"
+      : entitled
+        ? `Active Membership (${days} Days Left) • Tap any alert to open`
+        : "Subscription Required • Tap Plans or Claim 7-Day Free Trial";
+
+    document.getElementById("trialBannerCard").style.display =
+      (!isUserAdmin() && !entitled && userProfile && !userProfile.trialClaimed) ? "block" : "none";
+
+    if (broadcastMessages.length === 0) {
+      listEl.innerHTML = `<div class="card"><div class="card-sub">No broadcast messages published yet.</div></div>`;
+      return;
+    }
+
+    listEl.innerHTML = "";
+    broadcastMessages.forEach(msg => {
+      const isOpened = openedMessageIds.has(msg.id);
+      const card = document.createElement("div");
+      card.className = "card" + (msg.isPinned ? " card-pinned" : "");
+
+      const seenCount = allReceipts.filter(r => r.messageId === msg.id).length;
+
+      if (!entitled) {
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span class="pill pill-amber">🔒 LOCKED BROADCAST</span>
+            <span class="card-sub">${new Date(Number(msg.createdAtMillis || Date.now())).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+          </div>
+          <div class="card-title">Trading Zone • 1 new message</div>
+          <p class="card-sub" style="margin:6px 0 10px;">Activate your 7-Day Free Trial or a QR Membership Plan to unlock this broadcast message.</p>
+          <button class="btn btn-primary" onclick="document.querySelector('[data-tab=tabPlans]').click()">Unlock Membership Plan</button>
+        `;
+      } else if (!isOpened) {
+        card.style.cursor = "pointer";
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span class="pill pill-emerald">${msg.isPinned ? "📌 PINNED • " : ""}NEW NOTIFICATION</span>
+            <span class="card-sub">${new Date(Number(msg.createdAtMillis || Date.now())).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+          </div>
+          <div class="card-title">Trading Zone • 1 new message</div>
+          <p class="card-sub">Tap to open and reveal full market broadcast &amp; chart</p>
+        `;
+        card.onclick = () => openBroadcastMessage(msg);
+      } else {
+        const replyHtml = msg.replyToTitle ? `
+          <div class="quoted-reply">
+            <div style="font-weight:800;color:var(--emerald);">↩ Replying to: ${escapeHtml(msg.replyToTitle)}</div>
+            <div style="color:var(--muted);">${escapeHtml(msg.replyToSnippet || "")}</div>
+          </div>
+        ` : "";
+        const imgHtml = msg.markedPhotoBase64 ? `
+          <img class="chart-img" src="data:image/jpeg;base64,${msg.markedPhotoBase64}" alt="Chart" />
+        ` : "";
+        const adminHtml = isUserAdmin() ? `
+          <div class="btn-row" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+            <button class="btn btn-outline" onclick="openSeenByModal('${msg.id}', '${escapeHtml(msg.title)}')">👁️ Seen (${seenCount})</button>
+            <button class="btn btn-outline" onclick="prepareReplyBroadcast('${msg.id}')">↩ Reply</button>
+            <button class="btn btn-crimson" onclick="deleteBroadcast('${msg.id}')">Delete</button>
+          </div>
+        ` : "";
+
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="display:flex;gap:6px;align-items:center;">
+              ${msg.isPinned ? `<span class="pill pill-amber">📌 PINNED</span>` : ""}
+              <span class="pill pill-blue">${escapeHtml(msg.category || "INTRADAY")}</span>
+            </div>
+            <span class="card-sub">${new Date(Number(msg.createdAtMillis || Date.now())).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</span>
+          </div>
+          ${replyHtml}
+          <div class="card-title">${escapeHtml(msg.title)}</div>
+          <p style="font-size:14px;line-height:1.55;margin-top:6px;white-space:pre-wrap;">${escapeHtml(msg.content)}</p>
+          ${imgHtml}
+          ${adminHtml}
+        `;
+      }
+      listEl.appendChild(card);
+    });
+  }
+
+  async function openBroadcastMessage(msg) {
+    openedMessageIds.add(msg.id);
+    localStorage.setItem("tz_opened_msgs", JSON.stringify([...openedMessageIds]));
+    renderBroadcastStream();
+    if (currentUser && userProfile) {
+      try {
+        await setDoc(doc(db, "message_views", `${msg.id}_${currentUser.uid}`), {
+          messageId: msg.id,
+          userId: currentUser.uid,
+          userName: userProfile.fullName || currentUser.email,
+          userEmail: currentUser.email || "",
+          userPhotoBase64: userProfile.photoBase64 || "",
+          openedAtMillis: Date.now()
+        });
+      } catch (_) {}
+    }
+  }
+
+  window.openSeenByModal = function(msgId, title) {
+    document.getElementById("seenByModalTitle").textContent = `Seen By • ${title}`;
+    const list = allReceipts.filter(r => r.messageId === msgId);
+    const container = document.getElementById("seenByModalList");
+    if (list.length === 0) {
+      container.innerHTML = `<div class="card-sub">No members have opened this message yet.</div>`;
+    } else {
+      container.innerHTML = list.map(r => `
+        <div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid var(--border);font-size:13px;">
+          <strong>${escapeHtml(r.userName || r.userEmail)}</strong>
+          <span class="card-sub">${new Date(Number(r.openedAtMillis || Date.now())).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+        </div>
+      `).join("");
+    }
+    document.getElementById("seenByModal").classList.add("open");
+  };
+  window.closeSeenByModal = function() {
+    document.getElementById("seenByModal").classList.remove("open");
+  };
+
+  // Commodity Stream (NO Star Rating, NO Risk Level, Pinned Messages, Phone/ID Auto-Blocking)
+  window.selectCommodityTag = function(tag, btn) {
+    selectedCommodityTag = tag;
+    document.querySelectorAll("#commodityComposerCard .chip").forEach(c => c.classList.remove("selected"));
+    btn.classList.add("selected");
+  };
+
+  function containsPersonalContactInfo(text) {
+    const phoneRegex = /(?:\+?\d[\d\s\-().]{7,}\d)/;
+    const emailRegex = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+    const handleRegex = /(?:@[A-Za-z0-9_]{3,}|upi|whatsapp|telegram|insta|call\s*me|contact\s*me)/i;
+    return phoneRegex.test(text) || emailRegex.test(text) || handleRegex.test(text);
+  }
+
+  window.submitCommodityPost = async function() {
+    if (!isEntitled()) {
+      showToast("Active subscription or 7-Day Free Trial required to post in Commodity");
+      return;
+    }
+    if (userProfile?.isCommodityMuted && !isUserAdmin()) {
+      showToast("Your Commodity messaging privilege has been muted by Admin.");
+      return;
+    }
+    if (pricingConfig.commodityChatLocked && !isUserAdmin()) {
+      showToast("Commodity chat is currently paused by Admin.");
+      return;
+    }
+    const text = document.getElementById("commodityInput").value.trim();
+    if (!text) return;
+
+    // Phone / Email / Personal ID Auto-Blocker
+    if (!isUserAdmin() && containsPersonalContactInfo(text)) {
+      try {
+        await addDoc(collection(db, "moderation_alerts"), {
+          reviewId: "BLOCKED",
+          userId: currentUser.uid,
+          userEmail: currentUser.email || "",
+          userName: userProfile?.fullName || currentUser.email || "",
+          deviceId,
+          originalUneditedText: text,
+          filteredPublicText: "[BLOCKED PERSONAL CONTACT INFO]",
+          detectedWords: "Phone/Email/Personal ID",
+          status: "OPEN",
+          createdAtMillis: Date.now()
+        });
+      } catch (_) {}
+      showToast("🚫 Blocked! Sharing phone numbers, emails, or IDs is strictly prohibited and Admin has been alerted.");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "community_reviews"), {
+        tradeMessageId: "GENERAL",
+        tradeMessageTitle: "Commodity Discussion",
+        tradeRiskLevel: "",
+        topicTag: selectedCommodityTag,
+        userId: currentUser.uid,
+        userAlias: userProfile?.fullName || "Member",
+        userRealName: userProfile?.fullName || "",
+        userEmail: currentUser.email || "",
+        userPhotoBase64: userProfile?.photoBase64 || "",
+        deviceId,
+        publicOpinionText: text,
+        rating: 5,
+        hadProfanityBlurred: false,
+        isPinned: false,
+        pinnedAtMillis: 0,
+        createdAtMillis: Date.now()
+      });
+      document.getElementById("commodityInput").value = "";
+      showToast("Commodity message posted!");
+    } catch (err) {
+      showToast(err?.message || "Could not post Commodity message");
+    }
+  };
+
+  function renderCommodityStream() {
+    const listEl = document.getElementById("commodityList");
+    if (!listEl) return;
+    if (communityReviews.length === 0) {
+      listEl.innerHTML = `<div class="card"><div class="card-sub">No Commodity messages yet. Start the discussion above!</div></div>`;
+      return;
+    }
+    listEl.innerHTML = "";
+    communityReviews.forEach(rev => {
+      const card = document.createElement("div");
+      card.className = "card" + (rev.isPinned ? " card-pinned" : "");
+      const adminBtns = isUserAdmin() ? `
+        <div class="btn-row" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
+          <button class="btn btn-outline" onclick="togglePinCommodity('${rev.id}', ${!rev.isPinned})">${rev.isPinned ? "Unpin" : "📌 Pin to Top"}</button>
+          <button class="btn btn-crimson" onclick="deleteCommodityMsg('${rev.id}')">Delete</button>
+        </div>
+      ` : "";
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="display:flex;gap:6px;align-items:center;">
+            ${rev.isPinned ? `<span class="pill pill-amber">📌 Pinned Message</span>` : ""}
+            <span class="pill pill-emerald">${escapeHtml(rev.topicTag || "COMMODITY")}</span>
+          </div>
+          <span class="card-sub">${new Date(Number(rev.createdAtMillis || Date.now())).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+        </div>
+        <div style="font-size:13px;font-weight:800;margin-bottom:4px;">${escapeHtml(rev.userAlias || "Member")}</div>
+        <p style="font-size:14px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(rev.publicOpinionText || "")}</p>
+        ${adminBtns}
+      `;
+      listEl.appendChild(card);
+    });
+  }
+
+  window.togglePinCommodity = async function(id, pin) {
+    try {
+      await updateDoc(doc(db, "community_reviews", id), {
+        isPinned: pin,
+        pinnedAtMillis: pin ? Date.now() : 0
+      });
+      showToast(pin ? "Message pinned to top!" : "Message unpinned");
+    } catch (e) {
+      showToast(e?.message || "Failed to update pin");
+    }
+  };
+
+  window.deleteCommodityMsg = async function(id) {
+    try {
+      await deleteDoc(doc(db, "community_reviews", id));
+      showToast("Commodity message deleted");
+    } catch (e) {
+      showToast(e?.message || "Failed to delete");
+    }
+  };
+
+  // Plans & Free Trial
+  window.requestFreeTrial = async function() {
+    if (!currentUser || !userProfile) return;
+    try {
+      await addDoc(collection(db, "access_requests"), {
+        userId: currentUser.uid,
+        userEmail: currentUser.email || "",
+        userName: userProfile.fullName || currentUser.email || "",
+        userPhone: userProfile.phoneNumber || "",
+        deviceId,
+        requestType: "FREE_TRIAL_7D",
+        planName: "7-Day Free Trial",
+        amountInr: 0,
+        validityDays: 7,
+        utrReference: "FREE_TRIAL_1_WEEK",
+        paymentScreenshotBase64: "",
+        status: "PENDING",
+        createdAtMillis: Date.now(),
+        reviewedAtMillis: 0
+      });
+      showToast("7-Day Free Trial requested! Pending Admin approval.");
+    } catch (e) {
+      showToast(e?.message || "Failed to request trial");
+    }
+  };
+
+  window.selectPlanSlot = function(slot) {
+    selectedPlanSlot = slot;
+    [1, 2, 3].forEach(s => document.getElementById("planTab" + s)?.classList.toggle("selected", s === slot));
+    renderPlansTab();
+  };
+
+  function renderPlansTab() {
+    const pName = selectedPlanSlot === 1 ? pricingConfig.planName : selectedPlanSlot === 2 ? pricingConfig.plan2Name : pricingConfig.plan3Name;
+    const pPrice = selectedPlanSlot === 1 ? pricingConfig.priceInr : selectedPlanSlot === 2 ? pricingConfig.plan2PriceInr : pricingConfig.plan3PriceInr;
+    const pDays = selectedPlanSlot === 1 ? pricingConfig.validityDays : selectedPlanSlot === 2 ? pricingConfig.plan2ValidityDays : pricingConfig.plan3ValidityDays;
+    const pQr = selectedPlanSlot === 1 ? pricingConfig.qrCodeBase64 : selectedPlanSlot === 2 ? pricingConfig.plan2QrCodeBase64 : pricingConfig.plan3QrCodeBase64;
+
+    document.getElementById("selectedPlanTitle").textContent = pName || "Membership Plan";
+    document.getElementById("selectedPlanPrice").textContent = "₹" + Number(pPrice || 2499).toFixed(0);
+    document.getElementById("selectedPlanValidity").textContent = `${pDays || 30} Days Full Broadcast & Commodity Access`;
+    document.getElementById("planUpiLabel").textContent = "Official UPI ID: " + (pricingConfig.upiId || "tradingzone@upi");
+
+    const qrContainer = document.getElementById("planQrContainer");
+    if (pQr) {
+      qrContainer.innerHTML = `<img src="data:image/jpeg;base64,${pQr}" style="max-width:210px;border-radius:14px;border:4px solid #fff;" alt="UPI QR" />`;
+    } else {
+      qrContainer.innerHTML = `<div class="qr-box" id="dynamicUpiQr"></div>`;
+      const upiUri = `upi://pay?pa=${encodeURIComponent(pricingConfig.upiId || "tradingzone@upi")}&pn=TradingZone&am=${Number(pPrice || 2499)}&cu=INR`;
+      renderQrIntoElement("dynamicUpiQr", upiUri, 5);
+    }
+
+    const myReqEl = document.getElementById("myRequestsList");
+    const mine = allRequests.filter(r => r.userId === currentUser?.uid);
+    if (mine.length === 0) {
+      myReqEl.innerHTML = `<div class="card-sub">No subscription or trial requests submitted yet.</div>`;
+    } else {
+      myReqEl.innerHTML = mine.map(r => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border:1px solid var(--border);border-radius:10px;">
+          <div>
+            <div style="font-size:13px;font-weight:700;">${escapeHtml(r.planName)} (₹${Number(r.amountInr || 0)})</div>
+            <div class="card-sub">UTR: ${escapeHtml(r.utrReference || "N/A")}</div>
+          </div>
+          <span class="pill ${r.status === 'APPROVED' ? 'pill-emerald' : r.status === 'REJECTED' ? 'pill-crimson' : 'pill-amber'}">${escapeHtml(r.status)}</span>
+        </div>
+      `).join("");
+    }
+  }
+
+  window.submitUpiPaymentProof = async function() {
+    const utr = document.getElementById("paymentUtrInput").value.trim();
+    if (utr.length < 6) {
+      showToast("Enter a valid UPI UTR / Reference number");
+      return;
+    }
+    const pName = selectedPlanSlot === 1 ? pricingConfig.planName : selectedPlanSlot === 2 ? pricingConfig.plan2Name : pricingConfig.plan3Name;
+    const pPrice = selectedPlanSlot === 1 ? pricingConfig.priceInr : selectedPlanSlot === 2 ? pricingConfig.plan2PriceInr : pricingConfig.plan3PriceInr;
+    const pDays = selectedPlanSlot === 1 ? pricingConfig.validityDays : selectedPlanSlot === 2 ? pricingConfig.plan2ValidityDays : pricingConfig.plan3ValidityDays;
+
+    try {
+      await addDoc(collection(db, "access_requests"), {
+        userId: currentUser.uid,
+        userEmail: currentUser.email || "",
+        userName: userProfile?.fullName || currentUser.email || "",
+        userPhone: userProfile?.phoneNumber || "",
+        deviceId,
+        requestType: "PAID_UPI",
+        planName: pName,
+        amountInr: Number(pPrice || 2499),
+        validityDays: Number(pDays || 30),
+        utrReference: utr,
+        paymentScreenshotBase64: uploadedPhotos.payment || "",
+        status: "PENDING",
+        createdAtMillis: Date.now(),
+        reviewedAtMillis: 0
+      });
+      document.getElementById("paymentUtrInput").value = "";
+      showToast("Payment proof submitted for Admin approval!");
+    } catch (e) {
+      showToast(e?.message || "Failed to submit payment");
+    }
+  };
+
+  // Settings & Profile Edit Request
+  function renderSettingsProfile() {
+    if (!userProfile) return;
+    document.getElementById("settingsUserName").textContent = userProfile.fullName || currentUser?.email || "Member";
+    document.getElementById("settingsUserEmail").textContent = `${userProfile.email || ""} • ${userProfile.phoneNumber || ""}`;
+    if (userProfile.photoBase64) {
+      document.getElementById("settingsAvatar").src = "data:image/jpeg;base64," + userProfile.photoBase64;
+    }
+    document.getElementById("pendingProfileEditBanner").style.display = userProfile.hasPendingProfileEdit ? "inline-flex" : "none";
+  }
+
+  window.toggleProfileEditBox = function() {
+    const box = document.getElementById("profileEditBox");
+    box.style.display = box.style.display === "none" ? "flex" : "none";
+    if (userProfile) {
+      document.getElementById("editProfileName").value = userProfile.fullName || "";
+      document.getElementById("editProfilePhone").value = userProfile.phoneNumber || "";
+      document.getElementById("editProfileCity").value = userProfile.city || "";
+    }
+  };
+
+  window.submitProfileEditRequest = async function() {
+    const name = document.getElementById("editProfileName").value.trim();
+    const phone = document.getElementById("editProfilePhone").value.trim();
+    const city = document.getElementById("editProfileCity").value.trim();
+    if (!name || !phone) {
+      showToast("Enter your updated name and mobile number");
+      return;
+    }
+    try {
+      if (isUserAdmin()) {
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          fullName: name,
+          phoneNumber: phone,
+          city,
+          photoBase64: uploadedPhotos.profileEdit || userProfile.photoBase64 || ""
+        });
+        showToast("Admin profile updated!");
+      } else {
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          hasPendingProfileEdit: true,
+          pendingFullName: name,
+          pendingPhoneNumber: phone,
+          pendingCity: city,
+          pendingPhotoBase64: uploadedPhotos.profileEdit || userProfile.photoBase64 || "",
+          pendingEditRequestedAtMillis: Date.now()
+        });
+        showToast("Profile update request sent to Admin for approval!");
+      }
+      document.getElementById("profileEditBox").style.display = "none";
+    } catch (e) {
+      showToast(e?.message || "Failed to request profile edit");
+    }
+  };
+
+  window.saveNotifPrefs = function() {
+    localStorage.setItem("tz_pref_instant", document.getElementById("prefInstantNotif").checked);
+    localStorage.setItem("tz_pref_offline", document.getElementById("prefOfflineReminder").checked);
+    localStorage.setItem("tz_pref_expiry", document.getElementById("prefExpiryNotif").checked);
+    showToast("Notification preferences saved!");
+  };
+
+  window.toggleThemeMode = function() {
+    document.body.classList.toggle("light-mode");
+  };
+
+  // Admin Console Functions
+  window.prepareReplyBroadcast = function(msgId) {
+    const msg = broadcastMessages.find(m => m.id === msgId);
+    if (!msg) return;
+    replyingToBroadcast = msg;
+    const banner = document.getElementById("adminReplyBanner");
+    banner.style.display = "block";
+    banner.innerHTML = `<strong>Replying to: ${escapeHtml(msg.title)}</strong> <button onclick="clearReplyBroadcast()" style="float:right;background:none;border:none;color:var(--crimson);cursor:pointer;">✕</button>`;
+    document.getElementById("navAdminBtn").click();
+  };
+  window.clearReplyBroadcast = function() {
+    replyingToBroadcast = null;
+    document.getElementById("adminReplyBanner").style.display = "none";
+  };
+
+  window.adminPublishBroadcast = async function() {
+    const title = document.getElementById("adminMsgTitle").value.trim();
+    const content = document.getElementById("adminMsgBody").value.trim();
+    const category = document.getElementById("adminMsgCategory").value;
+    const riskLevel = document.getElementById("adminMsgRisk").value;
+    const isPinned = document.getElementById("adminMsgPinned").checked;
+    if (!title || !content) {
+      showToast("Enter broadcast headline and content");
+      return;
+    }
+    try {
+      const now = Date.now();
+      await addDoc(collection(db, "broadcast_messages"), {
+        title,
+        content,
+        category,
+        riskLevel,
+        markedPhotoBase64: uploadedPhotos.adminChart || "",
+        linkUrl: "",
+        linkTitle: "",
+        isPinned,
+        isEdited: false,
+        authorEmail: currentUser.email || PRIMARY_ADMIN_EMAIL,
+        authorName: userProfile?.fullName || "Atharva Garg",
+        replyToMessageId: replyingToBroadcast?.id || "",
+        replyToTitle: replyingToBroadcast?.title || "",
+        replyToSnippet: (replyingToBroadcast?.content || "").substring(0, 90),
+        replyToRiskLevel: replyingToBroadcast?.riskLevel || "",
+        createdAtMillis: now,
+        updatedAtMillis: now
+      });
+      document.getElementById("adminMsgTitle").value = "";
+      document.getElementById("adminMsgBody").value = "";
+      uploadedPhotos.adminChart = "";
+      document.getElementById("adminChartLabel").textContent = "📈 Attach Chart / Market Photo";
+      window.clearReplyBroadcast();
+      showToast("Broadcast published to all Android & Apple devices!");
+    } catch (e) {
+      showToast(e?.message || "Failed to publish broadcast");
+    }
+  };
+
+  window.deleteBroadcast = async function(id) {
+    try {
+      await deleteDoc(doc(db, "broadcast_messages", id));
+      showToast("Broadcast deleted");
+    } catch (e) {
+      showToast(e?.message || "Delete failed");
+    }
+  };
+
+  function renderAdminPanel() {
+    // 1. Approvals
+    const pendingRegs = allUsers.filter(u => u.accountStatus === "PENDING_APPROVAL");
+    const pendingEdits = allUsers.filter(u => u.hasPendingProfileEdit);
+    const pendingReqs = allRequests.filter(r => r.status === "PENDING");
+    const appEl = document.getElementById("adminApprovalsList");
+    if (appEl) {
+      const itemsHtml = [];
+      pendingRegs.forEach(u => {
+        itemsHtml.push(`
+          <div style="padding:10px;border:1px solid var(--border);border-radius:12px;">
+            <div style="font-weight:800;font-size:13px;">New Member: ${escapeHtml(u.fullName || u.email)}</div>
+            <div class="card-sub">${escapeHtml(u.email)} • ${escapeHtml(u.phoneNumber || "")}</div>
+            <div class="btn-row" style="margin-top:8px;">
+              <button class="btn btn-primary" onclick="adminApproveMember('${u.id}', false)">Approve</button>
+              <button class="btn btn-outline" onclick="adminApproveMember('${u.id}', true)">Approve + 7d Trial</button>
+            </div>
+          </div>
+        `);
+      });
+      pendingEdits.forEach(u => {
+        itemsHtml.push(`
+          <div style="padding:10px;border:1px solid var(--amber);border-radius:12px;">
+            <div style="font-weight:800;font-size:13px;">Profile Edit: ${escapeHtml(u.fullName)} → ${escapeHtml(u.pendingFullName)}</div>
+            <div class="card-sub">Phone: ${escapeHtml(u.pendingPhoneNumber)} • City: ${escapeHtml(u.pendingCity)}</div>
+            <div class="btn-row" style="margin-top:8px;">
+              <button class="btn btn-primary" onclick="adminReviewProfileEdit('${u.id}', true)">Approve Edit</button>
+              <button class="btn btn-outline" onclick="adminReviewProfileEdit('${u.id}', false)">Reject</button>
+            </div>
+          </div>
+        `);
+      });
+      pendingReqs.forEach(r => {
+        itemsHtml.push(`
+          <div style="padding:10px;border:1px solid var(--emerald);border-radius:12px;">
+            <div style="font-weight:800;font-size:13px;">${escapeHtml(r.planName)} • ₹${Number(r.amountInr || 0)} (${r.validityDays}d)</div>
+            <div class="card-sub">${escapeHtml(r.userName)} • UTR: ${escapeHtml(r.utrReference)}</div>
+            <div class="btn-row" style="margin-top:8px;">
+              <button class="btn btn-primary" onclick="adminApproveAccessReq('${r.id}', '${r.userId}', '${escapeHtml(r.planName)}', ${Number(r.validityDays || 7)}, '${r.requestType}')">Approve (${r.validityDays}d)</button>
+              <button class="btn btn-crimson" onclick="adminRejectAccessReq('${r.id}')">Reject</button>
+            </div>
+          </div>
+        `);
+      });
+      appEl.innerHTML = itemsHtml.length ? itemsHtml.join("") : `<div class="card-sub">No pending approvals.</div>`;
+    }
+
+    // 2. Moderation Alerts
+    const alertEl = document.getElementById("adminAlertsList");
+    if (alertEl) {
+      if (moderationAlerts.length === 0) {
+        alertEl.innerHTML = `<div class="card-sub">No moderation alerts.</div>`;
+      } else {
+        alertEl.innerHTML = moderationAlerts.slice(0, 15).map(a => `
+          <div style="padding:10px;border:1px solid var(--crimson);border-radius:12px;background:var(--crimson-dim);">
+            <div style="font-weight:800;font-size:13px;">${escapeHtml(a.userName || a.userEmail)}</div>
+            <div style="font-size:12px;margin:4px 0;">Attempted: "${escapeHtml(a.originalUneditedText || "")}"</div>
+            <div class="card-sub">Triggered: ${escapeHtml(a.detectedWords || "")} • Status: ${escapeHtml(a.status)}</div>
+            <div class="btn-row" style="margin-top:8px;">
+              <button class="btn btn-crimson" onclick="adminBanUser('${a.userId}', '${a.deviceId}')">Ban User &amp; Device</button>
+            </div>
+          </div>
+        `).join("");
+      }
+    }
+
+    // 3. Users Directory (App Lock PIN & Security Question/Answer)
+    const usersEl = document.getElementById("adminUsersList");
+    if (usersEl) {
+      usersEl.innerHTML = allUsers.map(u => `
+        <div style="padding:10px;border:1px solid var(--border);border-radius:12px;">
+          <div style="font-weight:800;font-size:13px;">${escapeHtml(u.fullName || u.email)} (${escapeHtml(u.accountStatus)})</div>
+          <div class="card-sub">${escapeHtml(u.email)} • ${escapeHtml(u.phoneNumber || "")}</div>
+          <div style="font-size:12px;color:var(--emerald);font-weight:700;margin-top:4px;">
+            🔑 App Lock PIN: ${escapeHtml(u.appLockPin || "Not Set")}
+          </div>
+          <div style="font-size:11px;color:var(--amber);">
+            Q: ${escapeHtml(u.securityQuestion || "N/A")} | A: ${escapeHtml(u.securityAnswer || "N/A")}
+          </div>
+        </div>
+      `).join("");
+    }
+  }
+
+  window.adminApproveMember = async function(uid, withTrial) {
+    const now = Date.now();
+    const updates = { accountStatus: "APPROVED" };
+    if (withTrial) {
+      updates.entitlementStatus = "TRIAL_ACTIVE";
+      updates.activePlanName = "7-Day Free Trial";
+      updates.trialClaimed = true;
+      updates.subscriptionExpiresAtMillis = now + 7 * 86400000;
+    }
+    await updateDoc(doc(db, "users", uid), updates);
+    showToast("Member approved!");
+  };
+
+  window.adminReviewProfileEdit = async function(uid, approve) {
+    const u = allUsers.find(x => x.id === uid);
+    if (!u) return;
+    if (approve) {
+      await updateDoc(doc(db, "users", uid), {
+        fullName: u.pendingFullName || u.fullName,
+        phoneNumber: u.pendingPhoneNumber || u.phoneNumber,
+        city: u.pendingCity || u.city,
+        photoBase64: u.pendingPhotoBase64 || u.photoBase64,
+        hasPendingProfileEdit: false
+      });
+      showToast("Approved profile update!");
+    } else {
+      await updateDoc(doc(db, "users", uid), { hasPendingProfileEdit: false });
+      showToast("Rejected profile update");
+    }
+  };
+
+  window.adminApproveAccessReq = async function(reqId, uid, planName, days, type) {
+    const now = Date.now();
+    await updateDoc(doc(db, "access_requests", reqId), { status: "APPROVED", reviewedAtMillis: now });
+    await updateDoc(doc(db, "users", uid), {
+      accountStatus: "APPROVED",
+      entitlementStatus: type === "FREE_TRIAL_7D" ? "TRIAL_ACTIVE" : "PAID_ACTIVE",
+      activePlanName: planName,
+      trialClaimed: true,
+      subscriptionExpiresAtMillis: now + days * 86400000
+    });
+    showToast(`Approved ${planName} (${days}d)!`);
+  };
+
+  window.adminRejectAccessReq = async function(reqId) {
+    await updateDoc(doc(db, "access_requests", reqId), { status: "REJECTED", reviewedAtMillis: Date.now() });
+    showToast("Request rejected");
+  };
+
+  window.adminBanUser = async function(uid, devId) {
+    if (uid) await updateDoc(doc(db, "users", uid), { accountStatus: "BANNED", entitlementStatus: "EXPIRED" });
+    if (devId) await updateDoc(doc(db, "device_registry", devId), { isBanned: true, banReason: "Admin Moderation Ban" });
+    showToast("User & hardware device banned!");
+  };
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+</script>
+</body>
+</html>
