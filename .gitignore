@@ -5,12 +5,10 @@
 .DS_Store
 /build
 /app/build
+/.build-outputs
 /captures
 .externalNativeBuild
 .cxx
-*.apk
-!Trading-Zone.apk
-!releases/*.apk
 .env
 *-debug.log
 firestore-debug.log

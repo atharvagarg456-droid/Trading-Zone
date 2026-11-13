@@ -85,7 +85,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
+    // implementation(libs.androidx.material.icons.extended) // Replaced by lightweight local vector icons to reduce APK size by 14.5MB
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.appcompat)
     implementation(libs.kotlinx.coroutines.android)
